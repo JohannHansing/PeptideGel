@@ -14,8 +14,20 @@
 #include <boost/random/uniform_real_distribution.hpp>
 #include <boost/random/normal_distribution.hpp>
 #include <boost/random/gamma_distribution.hpp>
-#include <boost/math/special_functions/bessel.hpp>
+#include <Eigen/Dense>
 #include "CRod.h"
+#include "CBead.h"
+
+///////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////// TODO CLEAN THIS UP AFTER INCLUSION OF BEADS! 
+///////////////////////////////////////////////////////////////////////////////////////
+/* MORE TODO FOR BEADS:
+- make strength of the debye potential an input parameter! (now, lB = 1   i.e. weak interaction)
+- write trajectories of all beads to file. 
+- write trajectories of all beads to XYZ file vor VMD
+- write energies to file for partition coefficient
+*/
+
 
 #define ifdebug(x) 
 
@@ -26,6 +38,9 @@ class CConfiguration {
      * simulation are stored
      */
 private:
+    //MISC
+    FILE* m_traj_file;
+    
     //SCALING
     double _timestep;         //This is the RESCALED timestep! timestep = dt * kT / (frictionCoeffcient * particlesize)
     double _mu_sto;
@@ -41,7 +56,9 @@ private:
     double _potStrength;      // rescaled U_0 for exponential Potential
     double _rodDistance;
     double _cutoffExpSq;
-    double _stericrSq;    //cutoff for Lennard-Jones calculation (at minimum)
+    double _cylLJSq;    //cutoff for Lennard-Jones calculation between cyl and bead (at minimum)
+    
+    
 
 
     //bool Parameters
@@ -61,19 +78,81 @@ private:
                                             //plane at y=0, it is entryside[0] = 1, in the x-y plane at z=L it is entryside[1] = -1!
     double _resetpos;
     double _startpos[3];          //Stores where the particle starting position was. This is needed to calculate the mean square displacement
-    double _prevpos[3];           //Stores previous particle position before particle is moved.
+    Eigen::Vector3d _prevpos;           //Stores previous particle position before particle is moved.
     std::array<std::array<double, 16>, 3> _distarr;
 
     int _min, _max;        // parameters for determining up to which order neighboring rods are considered for the potential
 
     //Particle parameters
-    double _ppos[3];    //initialize particle position (DO IT LIKE resetpos FOR MOVEPARTICLEFOLLOW/RESET)
+    Eigen::Vector3d _ppos;    //initialize particle position (DO IT LIKE resetpos FOR MOVEPARTICLEFOLLOW/RESET)
     double _upot;
     double _f_mob[3];   //store mobility and stochastic force
     double _f_sto[3];
     // rod parameters
     double _polyrad;
     double _polydiamSq;
+    
+    //BEAD parameters
+    vector<CBead> _beads;
+    unsigned int _N_beads;
+    
+    
+    void initBeads(){
+        //init Beads as array of 3 beads, (1 , 0 , -1)
+        _beads.clear();
+        const int len = 5;
+        std::array<int,len> signs={1,0,1,0,1};
+        Eigen::Vector3d beadpos = _ppos;
+        for (int i=0;i<len;i++){
+            CBead bead = CBead(signs[i],beadpos);
+            _beads.push_back(bead);
+            beadpos(0) += _r0SP;
+            ifdebug(
+                cout << "beadpos\n" << beadpos << endl;
+                cout << "_ppos\n" << _ppos << endl;
+                cout << "beadpos\n" << bead.pos << endl;)
+        }
+        _N_beads = _beads.size();
+    }
+    
+    //---------------------------- POTENTIALS ------------------------------
+    double _uLJ;
+    
+    //SPRING potential
+    double _r0SP; //equilirbium distance of beads for peptide is defined by LJ pot minimum
+    double _kappaSP = 100;
+    double _uSpring;
+    
+    //DEBYE potential
+    double _lB = 1; // Fix this to weak interaction for now.
+    double _uDebye;
+    
+    void calcLJPot(const double rSq, double& U, double& Fr, double stericSq){
+        //Function to calculate the Lennard-Jones Potential
+        double  por6 = pow((stericSq / rSq),3); //por6 stands for "p over r to the power of 6" . The 2 comes from the fact, that I need the particle radius, not the particle size
+        ifdebug(if (4. * ( por6*por6 - por6 + 0.25 ) > 50) cout << "Very large LJ!!"<< endl;)
+        U += 4. * ( por6*por6 - por6 + 0.25 );
+        Fr +=  24. / ( rSq ) * ( 2. * por6*por6 - por6 );
+    }
+
+    void addSpringPot(const double& r, double &U, double &Fr) { 
+        //double u = _kappaSP * pow(r - _r0SP, 2);
+        //if (u > 10000) cout << "U = " << u << "r = " <<  r << endl;
+        U += (_kappaSP * pow(r - _r0SP, 2));
+        Fr += (_kappaSP * 2. * (_r0SP/r - 1.));
+    }    
+    
+    void addDebyePot(const double r, double& U, double& Fr, int att_rep){
+        // att_rep is positive or negative prefactor that determines the sign of the interaction
+        double utmp = att_rep * _lB * exp(-1 * r / _potRange) / r;
+        U += utmp;
+        Fr += utmp * (_potRange + r)/(_potRange*r*r);
+        //Fr += utmp * (1./ (_potRange * r) + 1./(r*r) );
+    }
+
+
+
+
 
     // gamma distribution
     double _alpha = 10.;
@@ -426,11 +505,19 @@ private:
     }
 
 
-
-
     bool testTracerOverlap(int i, int j, double ri, double rj){
-        return ((pow( _ppos[i] - ri , 2 ) + pow( _ppos[j] - rj , 2 )) < 1.13*_stericrSq);//make this a little bigger, so that it's out of reach of LJ
+        for (auto & bead :  _beads){
+            //make this a little bigger, so that it's out of reach of LJ
+            if ((pow( bead.pos(i) - ri , 2 ) + pow( bead.pos(j) - rj , 2 )) < 1.13*_cylLJSq){
+                return true;
+            }
+        }
+        return false;
     }
+
+    // bool testTracerOverlap(int i, int j, double ri, double rj){
+//         return ((pow( _ppos(i) - ri , 2 ) + pow( _ppos(j) - rj , 2 )) < 1.13*_cylLJSq);//make this a little bigger, so that it's out of reach of LJ
+//     }
     
     //TODO overlap
     bool testRodOverlap(int rodaxis, int i, int j, double ri, double rj){
@@ -462,38 +549,14 @@ private:
 
     bool tracerInBox(){
         for (int ax = 0;ax<3;ax++){
-            if ((_ppos[ax] < -0.1*_boxsize[ax]) || (_ppos[ax] > 1.1*_boxsize[ax])){
-                cout << "\nax " << ax << "\n_boxsize[ax] " << _boxsize[ax] << "\n_ppos[ax] " << _ppos[ax] << endl;
+            if ((_ppos(ax) < -0.1*_boxsize[ax]) || (_ppos(ax) > 1.1*_boxsize[ax])){
+                cout << "\nax " << ax << "\n_boxsize[ax] " << _boxsize[ax] << "\n_ppos(ax) " << _ppos(ax) << endl;
                 return false;
             }
         }
         return true;
     }
 
-    // bool rodinCell(){
-//         for (int axis = 0;axis<3;axis++){
-//             int i,j;
-//             i=axis+1;
-//             if (i==3) i =0;
-//             j=3-(i+axis);
-//             for (int irod=0;irod<_rodarr[axis].size();irod++){
-//                 for (int jrod=0;jrod<_rodarr[axis].size();jrod++){
-//                     double rax =_rodarr[axis][irod][jrod].coord[axis];
-//                     double ri =_rodarr[axis][irod][jrod].coord[i];
-//                     double rj =_rodarr[axis][irod][jrod].coord[j];
-//                     if  (rax != 0.){
-//                         cout << "\nax " << ax <<"\nError rax not zero, but rax = " << rax << endl;
-//                         return false;
-//                     }
-//                     if  TODO ((ri < _b_array[i][irod]) || (_ppos[ax] > _boxsize[ax])){
-//                         cout << "\nax " << ax << "\n_boxsize[ax] " << _boxsize[ax] << "\n_ppos[ax] " << _ppos[ax] << endl;
-//                         return false;
-//                     }
-//                 }
-//             }
-//         }
-//         return true;
-//     }
 
 
 
@@ -514,7 +577,7 @@ private:
     void setRanNumberGen(double seed);
     void countWallCrossing(int crossaxis, int exitmarker);
     void calculateExpHPI(const double r, double& U, double& Fr);
-    void calculateExpPotential(const double r, double& U, double& Fr);
+    void calculateExpPotential(const double r, double& U, double& Fr, int sign);
     void calculateExpPotentialMOD(const double r, double& U, double& Fr, int index);
     void modifyPot(double& U, double& Fr, double dist);
     void calcLJPot(const double r, double &U, double &dU);
@@ -528,16 +591,17 @@ public:
     CConfiguration();
     CConfiguration(
         string distribution,double timestep,  double potRange,  double potStrength, const bool rand,
-        double psize, const bool posHisto, const bool steric, const bool ranU, bool hpi, bool ranRod, double dvar, double polydiam);
+        double psize, const bool posHisto, const bool steric, const bool ranU, bool ranRod, double dvar, double polydiam, string peptide);
     void updateStartpos();
     void makeStep();
     void checkBoxCrossing();
     void calcStochasticForces();
     void calcMobilityForces();
+    void calcBeadInteraction();
     void calc_1RODONLY_MobilityForces();
     void calc_ZRODONLY_MobilityForces();
     void calc_YZRODONLY_MobilityForces();
-    void saveXYZTraj(string name, const int& move, string a_w);
+    void saveXYZTraj(string name, int move, string flag);
 
     double getUpot(){ return _upot; }
     double getDisplacement();
@@ -550,14 +614,14 @@ public:
     std::vector<double> getppos(){ // returns pointer to current particle position array
     	std::vector<double> pos (3);
     	for (int i = 0; i < 3; i++){
-            pos[i] = _ppos[i] + _boxCoord[i];
+            pos[i] = _ppos(i) + _boxCoord[i];
     	}
     	return pos;
     }
     std::vector<double> getppos_rel(){ // returns pointer to current particle position array
     	std::vector<double> pos (3);
     	for (int i = 0; i < 3; i++){
-            pos[i] = _ppos[i];
+            pos[i] = _ppos(i);
     	}
     	return pos;
     }
