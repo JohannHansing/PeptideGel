@@ -22,9 +22,7 @@
 ///////////////////////////// TODO CLEAN THIS UP AFTER INCLUSION OF BEADS! 
 ///////////////////////////////////////////////////////////////////////////////////////
 /* MORE TODO FOR BEADS:
-- make strength of the debye potential an input parameter! (now, lB = 1   i.e. weak interaction)
 - write trajectories of all beads to file. 
-- write trajectories of all beads to XYZ file vor VMD
 - write energies to file for partition coefficient
 */
 
@@ -80,7 +78,6 @@ private:
 
     //Particle parameters
     Eigen::Vector3d _ppos;    //initialize particle position (DO IT LIKE resetpos FOR MOVEPARTICLEFOLLOW/RESET)
-    double _upot;
     double _f_mob[3];   //store mobility and stochastic force
     double _f_sto[3];
     // rod parameters
@@ -91,7 +88,7 @@ private:
     vector<CBead> _beads;
     unsigned int _N_beads;
     
-    //---------------------------- INIT PEPTIDE ------------------------------
+    //---------------------------- PEPTIDE ------------------------------
     
     void initPeptide(string peptide){
         //init Beads as array of N beads
@@ -204,17 +201,17 @@ private:
         Fr +=  24. / ( rSq ) * ( 2. * por6*por6 - por6 );
     }
 
-    void addSpringPot(const double& r, double &U, double &Fr) { 
+    void calcSpringPot(const double& r, double &U, double &Fr) { 
         //double u = _kappaSP * pow(r - _r0SP, 2);
         //if (u > 10000) cout << "U = " << u << "r = " <<  r << endl;
-        U += (_kappaSP * pow(r - _r0SP, 2));
+        U = (_kappaSP * pow(r - _r0SP, 2));
         Fr += (_kappaSP * 2. * (_r0SP/r - 1.));
     }    
     
-    void addDebyePot(const double r, double& U, double& Fr, int att_rep){
+    void calcDebyePot(const double r, double& U, double& Fr, int att_rep){
         // att_rep is positive or negative prefactor that determines the sign of the interaction
         double utmp = att_rep * _uDebye * exp(-1. * r / _potRange) / r;
-        U += utmp;
+        U = utmp;
         Fr += utmp * (_potRange + r)/(_potRange*r*r);
         //Fr += utmp * (1./ (_potRange * r) + 1./(r*r) );
     }
@@ -468,7 +465,17 @@ public:
     void calc_YZRODONLY_MobilityForces();
     void saveXYZTraj(string name, int move, string flag);
 
-    double getUpot(){ return _upot; }
+    vector<double> getUpot(){
+        vector<double> upot_vec(_N_beads);
+        for (int i=0; i<_N_beads; i++) {
+             upot_vec[i] = _beads[i].upot;
+        }
+        return upot_vec; 
+    }
+    int get_Nbeads(){
+        return _N_beads;
+    }    
+    
     double getDisplacement();
     unsigned int getwallcrossings(int i){ return _wallcrossings[i]; }
     bool testOverlap();

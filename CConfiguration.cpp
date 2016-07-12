@@ -24,7 +24,6 @@ CConfiguration::CConfiguration(double timestep,  double potRange,  double potStr
     _ranU = ranU;
     _dvar = dvar;
     _uDebye = uDebye;
-    _upot = 0;
     _mu_sto = sqrt( 2 * _timestep );                 //timestep for stochastic force
     //Spring interaction
     _r0SP = 1.122462 * 2*_pradius;
@@ -55,22 +54,6 @@ void CConfiguration::updateStartpos(){
 
 
 
-// void CConfiguration::makeStep(){
-//     //move the particle according to the forces and record trajectory like watched by outsider
-//     for (int i = 0; i < 3; i++){
-//         _prevpos[i] = _ppos(i);
-//         const double disp = _timestep * _f_mob[i] + _mu_sto * _f_sto[i];
-//         _ppos(i) += disp;
-//         if (abs(disp) > 5){
-//             cout << "**** Way too big jump! " << endl;
-//         }
-//         else if (std::isnan(_ppos(i))){
-//             cout << "axis " << i << "\n_prevpos " << _prevpos[i] << "\n_ppos " << _ppos(i) << endl;
-//             cout << "_f_mob[i] " << _f_mob[i] << "\n_f_sto[i] " << _f_sto[i] << endl;
-//             abort();
-//         }
-//     }
-// }
 
 //TODO pep
 void CConfiguration::makeStep(){
@@ -82,7 +65,6 @@ void CConfiguration::makeStep(){
             bead.pos(i) += disp;
             if (abs(disp) > 5){
                 cout << "**** Way too big jump!\n"
-                    << "\n_upot = " << _upot
                         << "\nuDebye = " << _uDebye 
                             << " -- uspring = " << _uSpring << " -- uLJ beads = " << _uLJ <<  endl;
             }
@@ -169,11 +151,12 @@ void CConfiguration::calcMobilityForces(){
     double Epot = 0;
     double rcSq = 1.25992 * _cylLJSq;
     for (auto & bead :  _beads){
+        bead.upot = 0.;
         double r_i = 0, r_k = 0;
         array<double,4> r_is, r_ks;
         std::array<double, 16> ri_arr, rk_arr, rSq_arr;
         double r_absSq;
-        double utmp = 0, frtmp = 0;     //temporary "hilfsvariables"
+        double utmp = 0, frtmp = 0, uCylTot = 0;     //temporary "hilfsvariables"
         //reset mobility forces to zero
         bead.f_mob = Vector3d::Zero();
     
@@ -236,15 +219,15 @@ void CConfiguration::calcMobilityForces(){
                     cout << "ri " << ri_arr[j] << "\nrk " << rk_arr[j] << endl;
                 }
 
-
-                Epot += utmp;
+                uCylTot += utmp;
+                bead.upot += utmp;
                 bead.f_mob(i) += frtmp * ri_arr[j];
                 bead.f_mob(k) += frtmp * rk_arr[j];
             }
         }
         //ifdebug(cout << "bead.f_mob \n" << bead.f_mob << endl;)
+        ifdebug(cout << "uCylTot " << uCylTot <<  endl; )
     }
-    _upot = Epot;
     
     if (_N_beads != 1) calcBeadInteraction();
 }
@@ -269,6 +252,7 @@ void CConfiguration::calcBeadInteraction(){//TODO pep
     for (int i=0; i < _N_beads; i++){
         for (int j=i+1; j < _N_beads; j++){
             double frtmp = 0;
+            double utmp = 0;
             // const double rijSq = _rijSq_arr[cnt];
             // const Vector3d rvec = _rij_vec_arr[cnt];
             const Vector3d rvec = _beads[j].pos - _beads[i].pos;
@@ -277,21 +261,28 @@ void CConfiguration::calcBeadInteraction(){//TODO pep
             int debyeTrig = _beads[i].sign * _beads[j].sign;
             
             // LENNARD-JONES
-            if ( rijSq <  1.25992 * beadLJSq )  calcLJPot(rijSq, _uLJ, frtmp, beadLJSq);
+            if ( rijSq <  1.25992 * beadLJSq ) {
+                calcLJPot(rijSq, utmp, frtmp, beadLJSq);
+                _uLJ += utmp;
+            }
             
             // DEBYE
             if (debyeTrig != 0){// only calculate debye if both particles are charged.
                 rij = sqrt(rijSq);
-                addDebyePot(rij, _uDebye, frtmp, debyeTrig);
+                calcDebyePot(rij, utmp, frtmp, debyeTrig);
+                _uDebye += utmp;
             }
             
             // SPRING
             if (j==i+1){
                 // only calc square root if it has not already been calculated before for Debye
                 if (rij==0) rij = sqrt(rijSq);
-                addSpringPot(rij, _uSpring, frtmp);
+                calcSpringPot(rij, utmp, frtmp);
+                _uSpring += utmp;
             }
             faddtmp = frtmp * rvec;
+            _beads[i].upot += utmp;
+            _beads[j].upot += utmp;
             _beads[i].f_mob += - faddtmp ;
             _beads[j].f_mob += faddtmp;
             
@@ -299,8 +290,9 @@ void CConfiguration::calcBeadInteraction(){//TODO pep
             cnt++;
         }
         //ifdebug(cout << "beadInteraction: bead[i].f_mob \n" << _beads[i].f_mob << endl;)
+        ifdebug(cout<< "Energies:\n"  <<
+             "\nuDebye = " << _uDebye << " -- uspring = " << _uSpring << " -- uLJ beads = " << _uLJ <<  endl; )
     }
-    _upot+= _uLJ + _uDebye + _uSpring;
 }
 
 // So far this guy only writes the positions of the beads along the peptide
@@ -366,7 +358,7 @@ void CConfiguration::calculateExpPotential(const double rSq, double& U, double& 
     // k is the interaction range. U_0 is the strength of the potential
     //which is attractive if direction = -1, and repulsive if direction = 1
     //The potential is weighted with kT!
-    if (rSq < _cutoffExpSq && _potStrength != 0){
+    if (rSq < _cutoffExpSq && sign != 0){
         const double r = sqrt(rSq);
         U = sign * _potStrength * exp(-1.0 * r / _potRange);
         Fr = U / (_potRange * r);  //This is the force divided by the distance to the rod!

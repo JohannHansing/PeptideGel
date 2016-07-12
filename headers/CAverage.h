@@ -19,7 +19,6 @@
 class CAverage {
 private:
 	int _points;
-	int _runs;
 	std::string _name;
 	std::string _file_instV;
 	std::vector<double> _instantValues;
@@ -30,16 +29,14 @@ private:
 
 public:
 	CAverage();
-	CAverage(std::string name, std::string folder, int datapoints, int runs);
+	CAverage(std::string name, std::string folder, int datapoints);
 
-	void addInstantValue(double, int);
-	void addFPValue(double fpt, int n);
+	void addInstantValue(std::vector<double> v);
 
 //	double getAverage();
 	void clear();
 
-	void saveAverageInstantValues(double timeInt);
-	void saveAverageFPValue(double posInt);
+	void saveAverageInstantValues(int counter);
 	std::string getName() {	return _name; }
 };
 

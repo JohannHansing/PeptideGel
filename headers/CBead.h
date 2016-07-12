@@ -27,6 +27,7 @@ public:
     Eigen::Vector3d f_mob;   //store mobility and stochastic force
     Eigen::Vector3d f_sto;
     int sign = 1;
+    double upot = 0;
     
     CBead();
     CBead(int signx, Eigen::Vector3d posx){

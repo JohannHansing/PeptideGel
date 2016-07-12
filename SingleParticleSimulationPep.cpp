@@ -44,7 +44,7 @@ int main(int argc, const char* argv[]){
     double polydiam = atof( argv[boolpar+8] );
     double uDebye = atof( argv[boolpar+9] );
     unsigned int saveInt;
-    int instValIndex;                             //Counter for addInstantValue
+    int instValCount = 0;                             //Counter for addInstantValue
 
     steps = simtime/timestep;
     saveInt = steps/instantvalues;
@@ -70,8 +70,7 @@ int main(int argc, const char* argv[]){
 
 
     //initialize averages
-    CAverage energyU = CAverage("Upot", folder, instantvalues, runs);
-    CAverage squareDisp = CAverage("squaredisp", folder, instantvalues, runs);
+    CAverage energyU = CAverage("Upot", folder, conf.get_Nbeads());
     ifdebug(cout << "created CAverage files. ";)
 
 
@@ -102,9 +101,6 @@ int main(int argc, const char* argv[]){
 
         conf.updateStartpos();
 
-        instValIndex = 0;
-
-
         for (int i = 0; i < steps; i++){  //calculate stochastic force first, then mobility force!!
 
 
@@ -114,8 +110,8 @@ int main(int argc, const char* argv[]){
 
 
             if (((i+1)%saveInt) == 0){       //saving Instant Values for each saveInt'th step!
-                energyU.addInstantValue(conf.getUpot(), instValIndex);
-                instValIndex += 1;
+                energyU.addInstantValue(conf.getUpot());
+                instValCount += 1;
             }
 
 
@@ -153,7 +149,7 @@ int main(int argc, const char* argv[]){
         
         if (l%100 == 0){
             cout << "run " << l << endl;
-            if (l==1000) energyU.saveAverageInstantValues(saveInt*timestep);
+            energyU.saveAverageInstantValues(instValCount);
         }
 
 
@@ -161,14 +157,6 @@ int main(int argc, const char* argv[]){
 
 
 
-    //watch out: Save average instant values at timeInterval: timestep * saveinterval saveInt!!!
-    squareDisp.saveAverageInstantValues(saveInt*timestep);
-
-
-
-
-    //printReport(ranRod, conf.getwallcrossings(0), conf.getwallcrossings(1), conf.getwallcrossings(2), timestep, urange, ustrength, rodDist, particlesize, runs,
-    //        sizeOfArray(timestep), sizeOfArray(urange), sizeOfArray(ustrength), sizeOfArray(rodDist), sizeOfArray(particlesize), potentialMod, includeSteric);
 
 
     cout << "Simulation Finished" << endl;
