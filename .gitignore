@@ -1,0 +1,5 @@
+CMakeLists.txt
+Debug/
+*.DS_Store
+jobs/
+Release/

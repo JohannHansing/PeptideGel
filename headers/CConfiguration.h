@@ -45,10 +45,8 @@ private:
     double _timestep;         //This is the RESCALED timestep! timestep = dt * kT / (frictionCoeffcient * particlesize)
     double _mu_sto;
     double _pradius;     //particle size is most relevant for scaling! (default = 1)
-    double _boxsize[3];          // ALWAYS define boxsize through particlesize due to scaling!
+    double _boxsize[3] = {10,10,10};          // ALWAYS define boxsize through particlesize due to scaling!
     double _bdef = 10;     //default boxsize
-    std::array<std::array<double,3>,3> _b_array;
-    std::array<std::array<double,3>,3> _b_array_prev;
     double _epsilon;
 
     //EXPONENTIAL Potential
@@ -66,9 +64,6 @@ private:
     bool _LJPot;              // if true, then LJ interaction is calculated for steric hindrance
     bool _ranU;
     bool _hpi;
-    bool _ranRod;
-    bool _fixb;
-    bool _rand;
 
     //COUNTERS AND INIT VALUES
     double _boxCoord[3];
@@ -96,23 +91,98 @@ private:
     vector<CBead> _beads;
     unsigned int _N_beads;
     
+    //---------------------------- INIT PEPTIDE ------------------------------
     
-    void initBeads(){
-        //init Beads as array of 3 beads, (1 , 0 , -1)
-        _beads.clear();
-        const int len = 5;
-        std::array<int,len> signs={1,0,1,0,1};
-        Eigen::Vector3d beadpos = _ppos;
-        for (int i=0;i<len;i++){
-            CBead bead = CBead(signs[i],beadpos);
-            _beads.push_back(bead);
-            beadpos(0) += _r0SP;
-            ifdebug(
-                cout << "beadpos\n" << beadpos << endl;
-                cout << "_ppos\n" << _ppos << endl;
-                cout << "beadpos\n" << bead.pos << endl;)
+    void initPeptide(string peptide){
+        //init Beads as array of N beads
+        if (peptide=="3block" || peptide=="3cati" || peptide=="3ani"){
+            _beads.clear();
+            const int len = 3;
+            std::array<int,len> signs={1,0,1};
+            if (peptide=="3block") signs[0]=-1;
+            else if (peptide=="3ani"){
+                signs[0]=-1;
+                signs[2]=-1;
+            }
+            Eigen::Vector3d beadpos = _ppos;
+            for (int i=0;i<len;i++){
+                CBead bead = CBead(signs[i],beadpos);
+                _beads.push_back(bead);
+                beadpos(0) += _r0SP;
+                ifdebug(
+                    cout << "beadpos\n" << beadpos << endl;
+                    cout << "_ppos\n" << _ppos << endl;
+                    cout << "beadpos\n" << bead.pos << endl;)
+            }
         }
-        _N_beads = _beads.size();
+        else if (peptide=="8NNblock" || peptide=="8NNalter" || peptide=="8NNcati" || peptide=="8NNani"){
+            _beads.clear();
+            const int len = 8;
+            std::array<int,len> signs;
+            if (peptide=="8NNblock"){
+                array<int,len> tmp={1,1,1,1,-1,-1,-1,-1};
+                signs=tmp;
+            }
+            else if (peptide=="8NNalter"){
+                array<int,len> tmp={1,-1,1,-1,1,-1,1,-1};
+                signs=tmp;
+            }
+            else if (peptide=="8NNcati"){
+                array<int,len> tmp={1,1,1,1,1,1,1,1};
+                signs=tmp;
+            }
+            else if (peptide=="8NNani"){
+                array<int,len> tmp={-1,-1,-1,-1,-1,-1,-1,-1};
+                signs=tmp;
+            }
+            Eigen::Vector3d beadpos = _ppos;
+            for (int i=0;i<len;i++){
+                CBead bead = CBead(signs[i],beadpos);
+                _beads.push_back(bead);
+                beadpos(0) += _r0SP;
+                ifdebug(
+                    cout << "beadpos\n" << beadpos << endl;
+                    cout << "_ppos\n" << _ppos << endl;
+                    cout << "beadpos\n" << bead.pos << endl;)
+            }
+        }
+        else if (peptide=="11block" || peptide=="11alter" || peptide=="11cati" || peptide=="11ani"){
+            _beads.clear();
+            const int len = 11;
+            std::array<int,len> signs;
+            if (peptide=="8NNblock"){
+                array<int,len> tmp={1,0,1,0,1,0,-1,0,-1,0,-1};
+                signs=tmp;
+            }
+            else if (peptide=="8NNalter"){
+                array<int,len> tmp={1,0,-1,0,1,0,-1,0,1,0,-1};
+                signs=tmp;
+            }
+            else if (peptide=="8NNcati"){
+                array<int,len> tmp={1,0,1,0,1,0,1,0,1,0,1};
+                signs=tmp;
+            }
+            else if (peptide=="8NNani"){
+                array<int,len> tmp={-1,0,-1,0,-1,0,-1,0,-1,0,-1};
+                signs=tmp;
+            }
+            Eigen::Vector3d beadpos = _ppos;
+            for (int i=0;i<len;i++){
+                CBead bead = CBead(signs[i],beadpos);
+                _beads.push_back(bead);
+                beadpos(0) += _r0SP;
+                ifdebug(
+                    cout << "beadpos\n" << beadpos << endl;
+                    cout << "_ppos\n" << _ppos << endl;
+                    cout << "beadpos\n" << bead.pos << endl;)
+            }
+        }
+        else{
+            cout << "\nBad peptide name!\nAborting..." << endl;
+            abort();
+        }
+        
+         _N_beads = _beads.size();
     }
     
     //---------------------------- POTENTIALS ------------------------------
@@ -124,7 +194,6 @@ private:
     double _uSpring;
     
     //DEBYE potential
-    double _lB = 1; // Fix this to weak interaction for now.
     double _uDebye;
     
     void calcLJPot(const double rSq, double& U, double& Fr, double stericSq){
@@ -144,19 +213,12 @@ private:
     
     void addDebyePot(const double r, double& U, double& Fr, int att_rep){
         // att_rep is positive or negative prefactor that determines the sign of the interaction
-        double utmp = att_rep * _lB * exp(-1 * r / _potRange) / r;
+        double utmp = att_rep * _uDebye * exp(-1. * r / _potRange) / r;
         U += utmp;
         Fr += utmp * (_potRange + r)/(_potRange*r*r);
         //Fr += utmp * (1./ (_potRange * r) + 1./(r*r) );
     }
 
-
-
-
-
-    // gamma distribution
-    double _alpha = 10.;
-    double _beta = 1.;
 
     boost::mt19937 *m_igen;                      //generate instance of random number generator "twister".
     double zerotoone(){
@@ -177,203 +239,12 @@ private:
 	return (zeroone() * 2) - 1; //this calculation makes value either -1 or 1
     }
 
-    double ran_gamma(){
-        // http://www.boost.org/doc/libs/1_58_0/doc/html/boost/random/gamma_distribution.html
-        // Mean of gamma dist is alpha* beta
-        boost::variate_generator<boost::mt19937&    , boost::gamma_distribution<double> > ran_gen(
-                *m_igen, boost::gamma_distribution<double>(_alpha, _beta));
-        return ran_gen();
-    }
     
     double getfixb(){
         // helper function to fix boxsize
         return _bdef;
     }
 
-    void testgamma(){//test function to check functionality of boost gamma generator --> It works!
-        ofstream trajectoryfile;
-        trajectoryfile.open(("tmp_gamma.txt"));
-        for (int i=0;i<100000;i++){
-            trajectoryfile << fixed << ran_gamma() << endl;
-        }
-        trajectoryfile.close();
-    }
-
-    double new_b(){
-        // Function to return new random boxsize b - this assures that the new b is larger than a minimum value to avoid problems with the particle leaving the simulation box.
-        if (_fixb) {return _bdef;}
-        
-        double newb = ran_gamma();
-        while ( newb < 0.5){
-            newb = ran_gamma();
-        }
-        return newb;
-    }
-
-    void initRanb(){
-        // For now, I just use a gamma distribution
-        for (int i=0;i<3;i++){
-            _boxsize[i] = _bdef;
-            if ((_pradius > 4.5) && !_fixb )  _boxsize[i] = 2*_pradius + 1;
-            _b_array[i][1] = _boxsize[i];
-            _b_array[i][0] = new_b();
-            _b_array[i][2] = new_b();
-            ifdebug(cout << "INIT Ranb :" << _b_array[i][0] << "  " << _b_array[i][1] << "  " << _b_array[i][2] << endl;)
-        }
-    }
-
-    void updateRanb(int axis, int exitmarker){
-        _b_array_prev = _b_array;
-        if (_fixb) {return;}
-        // ROTATE http://en.cppreference.com/w/cpp/algorithm/rotate
-        //copy neighbor boxsize to _boxsize for particle box.
-        ifdebug(cout << "Update Ranb\naxis " << axis << "  --  exitmarker " << exitmarker << endl;)
-        double newb = new_b();
-        ifdebug(cout << "*" << newb << endl;)
-        if (exitmarker==1){
-            // rotation to the left
-            std::rotate(_b_array[axis].begin(), _b_array[axis].begin() + 1, _b_array[axis].end());
-            // assign new boxsize on right side
-            _b_array[axis].at(2) = newb;
-        }
-        else {
-            // rotation to the  right
-            std::rotate(_b_array[axis].rbegin(), _b_array[axis].rbegin() + 1, _b_array[axis].rend());
-            // assign new boxsize on right side
-            //ifdebug(cout << "B4 _b_array[axis].front() = " << _b_array[axis].front() << endl;)
-            _b_array[axis].at(0) = newb;
-            //ifdebug(cout << "AFTER _b_array[axis].front() = " << _b_array[axis].front() << endl;)
-        }
-        //copy to _boxsize array
-        _boxsize[axis] = _b_array[axis][1];
-        ifdebug(cout << "New b_array " << _b_array[axis][0] << "  " << _b_array[axis][1] << "  " << _b_array[axis][2] << endl;)
-    }
-
-
-    //TODOD
-    // ############# ranRod Stuff ##################
-    std::array<std::array<std::array<CRod, 3>, 3>, 3> _rodarr; // vector to store polymer rods in cell, one vector stores polymers that are parallel to the same axis
-    
-    void initRodsArr(){
-        int i,j;
-        double xipos, xjpos, cellInterval_ai, cellInterval_aj;
-        for (int axis=0;axis<3;axis++){//axis 0 is x axis.
-            i = axis +1;
-            if (i==3) i=0;
-            j=3-(i+axis);
-            cellInterval_ai = - _b_array[i][0];
-            for (int abc=0;abc<3;abc++){//for i = axis + 1
-                cellInterval_aj = - _b_array[j][0];
-                for (int def=0;def<3;def++){// for j = axis + 2
-                    xipos = atob(cellInterval_ai,cellInterval_ai+_b_array[i][abc]);
-                    xjpos = atob(cellInterval_aj,cellInterval_aj+_b_array[j][def]);
-                    if ((abc ==1) && (def == 1)){
-                        // In the central cell, the polymer goes to the origin, so that the particle has space to fit
-                        xipos = 0;
-                        xjpos = 0;
-                    }
-                    //TODO
-                    // if ((abc ==1) && (def == 2)){
-//                         // The particle should have at least one escape path, so that it does net get stuck right from the start
-//                         xipos = 0;
-//                         xjpos = _b_array[j][1] + _b_array[j][2];
-//                     }
-                    _rodarr[axis][abc][def] = CRod(axis, xipos, xjpos, _ranU, m_igen );
-                    cellInterval_aj += _b_array[j][def];
-                }
-                cellInterval_ai += _b_array[i][abc];
-            }
-            ifdebug(
-                cout << axis << endl;
-                prinRodPos(axis);
-            )
-        }
-    }
-
-
-
-    //TODO
-    void updateRodsArr(int crossaxis,int exitmarker){//exitmarker is -1 for negative direction, or 1 for positive
-        //delete all polymers orthogonal to crossaxis, that are outside the box now
-        //update other polymer positions
-        bool overlaps;
-        double cellInterval_ai, cellInterval_aj;
-        int i,j;
-        i=crossaxis+1;
-        if (i==3) i =0;
-        j=3-(i+crossaxis);
-        // rotate around rods in cells abc and def and reassign
-        if (exitmarker == 1){
-            // shift positions of rods USING PREVIOUS b ARRAY _b_array_prev!
-            for (int abc=0; abc<3;abc++){
-                for (int def=0; def<3;def++){
-                    _rodarr[i][abc][def].coord[crossaxis] -= _b_array_prev[crossaxis][1];
-                    _rodarr[j][abc][def].coord[crossaxis] -= _b_array_prev[crossaxis][1];
-                }
-            }
-            rotate_left(_rodarr[j]);
-            cellInterval_ai = - _b_array[i][0];
-            cellInterval_aj = - _b_array[j][0];
-            for (int abc=0;abc<3;abc++){
-                rotate_left(_rodarr[i][abc]);
-                // new rod positions
-                //Example: -_b_array[j][0] , 0
-                   //      0 , _b_array[j][1]
-                   //      _b_array[j][1], _b_array[j][1]+ _b_array[j][2]
-                overlaps=true;
-                while (overlaps){
-                    _rodarr[i][abc][2].coord[crossaxis] = atob(_b_array[crossaxis][1] , _b_array[crossaxis][1]+_b_array[crossaxis][2]);
-                    _rodarr[i][abc][2].coord[j] = atob(cellInterval_aj , cellInterval_aj+_b_array[j][abc]);
-                    overlaps= testTracerOverlap(crossaxis, j, _rodarr[i][abc][2].coord[crossaxis], _rodarr[i][abc][2].coord[j]);
-                    //cout << "Repeat?";
-                }
-                overlaps=true;
-                while (overlaps){
-                    _rodarr[j][2][abc].coord[crossaxis] = atob(_b_array[crossaxis][1] , _b_array[crossaxis][1]+_b_array[crossaxis][2]);
-                    _rodarr[j][2][abc].coord[i] = atob(cellInterval_ai , cellInterval_ai+_b_array[i][abc]);
-                    overlaps= testTracerOverlap(crossaxis, i, _rodarr[j][2][abc].coord[crossaxis], _rodarr[j][2][abc].coord[i]);
-                }
-                cellInterval_aj+=_b_array[j][abc];
-                cellInterval_ai+=_b_array[i][abc];
-            }
-        }
-        else{
-            // shift positions of rods
-            for (int abc=0; abc<3;abc++){
-                for (int def=0; def<3;def++){
-                    _rodarr[i][abc][def].coord[crossaxis] += _b_array_prev[crossaxis][0];
-                    _rodarr[j][abc][def].coord[crossaxis] += _b_array_prev[crossaxis][0];
-                }
-            }
-            rotate_right(_rodarr[j]);
-            cellInterval_ai = - _b_array[i][0];
-            cellInterval_aj = - _b_array[j][0];
-            for (int abc=0;abc<3;abc++){
-                rotate_right(_rodarr[i][abc]);
-                // new rod positions
-                overlaps=true;
-                while (overlaps){
-                    _rodarr[i][abc][0].coord[crossaxis] = atob(-_b_array[crossaxis][0] , 0);
-                    _rodarr[i][abc][0].coord[j] = atob(cellInterval_aj , cellInterval_aj+_b_array[j][abc]);
-                    overlaps= testTracerOverlap(crossaxis, j, _rodarr[i][abc][0].coord[crossaxis], _rodarr[i][abc][0].coord[j]);
-                }
-                overlaps=true;
-                while (overlaps){
-                    _rodarr[j][0][abc].coord[crossaxis] = atob(-_b_array[crossaxis][0] , 0);
-                    _rodarr[j][0][abc].coord[i] = atob(cellInterval_ai , cellInterval_ai+_b_array[i][abc]);
-                    overlaps= testTracerOverlap(crossaxis, i, _rodarr[j][0][abc].coord[crossaxis], _rodarr[j][0][abc].coord[i]);
-                }
-                cellInterval_aj+=_b_array[j][abc];
-                cellInterval_ai+=_b_array[i][abc];
-            }
-        }
-        ifdebug(
-            if (testOverlap()){
-                cout << "\nERROR still overlap after newrod init!" << endl;
-                //abort();
-            }
-        )
-    }
     
     //************** Rand ***************    
     double ran_norm(){
@@ -425,7 +296,6 @@ private:
         j=3-(i+crossaxis);
         // rotate around rods in cells abc and def and reassign
         if (exitmarker == 1){
-            // shift positions of rods USING PREVIOUS b ARRAY _b_array_prev!
             for (int abcd=0; abcd<4;abcd++){
                 for (int efgh=0; efgh<4;efgh++){
                     _drods[i][abcd][efgh].coord[crossaxis] -= _bdef;
@@ -437,10 +307,6 @@ private:
             cellInterval_aj = - _bdef;
             for (int abcd=0;abcd<4;abcd++){
                 rotate_left(_drods[i][abcd]);
-                // new rod positions
-                //Example: -_b_array[j][0] , 0
-                   //      0 , _b_array[j][1]
-                   //      _b_array[j][1], _b_array[j][1]+ _b_array[j][2]
                 overlaps=true;
                 while (overlaps){
                     _drods[i][abcd][3].coord[crossaxis] = 2*_bdef + ran_norm();
@@ -589,9 +455,8 @@ private:
 
 public:
     CConfiguration();
-    CConfiguration(
-        string distribution,double timestep,  double potRange,  double potStrength, const bool rand,
-        double psize, const bool posHisto, const bool steric, const bool ranU, bool ranRod, double dvar, double polydiam, string peptide);
+    CConfiguration(double timestep,  double potRange,  double potStrength, 
+        double psize, const bool posHisto, const bool steric, const bool ranU, double dvar, double polydiam, string peptide, double uDebye);
     void updateStartpos();
     void makeStep();
     void checkBoxCrossing();
@@ -636,101 +501,6 @@ public:
         distancesfile << endl;
     }
 
-
-// _______________________________ OLD REL STUFF _____________________________________________________
-
-
-    // void updateRodsRel(int crossaxis,int exitmarker){//exitmarker is -1 for negative direction, or 1 for positive
-    //     //delete all polymers orthogonal to crossaxis, that are outside the box now
-    //     //update other polymer positions
-    //     //TODO del
-    //     // cout << "update rods\ncrossaxis " << crossaxis << " -- exitm " << exitmarker << endl;
-    //     bool overlaps;
-    //     double cellInterval_ai, cellInterval_aj;
-    //     int i,j;
-    //     i=crossaxis+1;
-    //     if (i==3) i =0;
-    //     j=3-(i+crossaxis);
-    //     // rotate around rods in cells abc and def and reassign
-    //     if (exitmarker == 1){
-    //         rotate_left(_rodarr[j]);
-    //         for (int abc=0;abc<3;abc++){
-    //             rotate_left(_rodarr[i][abc]);
-    //             // new rod positions
-    //             //Example: -_b_array[j][0] , 0
-    //                //      0 , _b_array[j][1]
-    //                //      _b_array[j][1], _b_array[j][1]+ _b_array[j][2]
-    //             overlaps=true;
-    //             while (overlaps){
-    //                 _rodarr[i][abc][2].coord[crossaxis] = atob(0,_b_array[crossaxis][2]);
-    //                 _rodarr[i][abc][2].coord[j] = atob(0, _b_array[j][abc]);
-    //                 //TODO overlaps= testTracerOverlap(crossaxis, j, _rodarr[i][abc][2].coord[crossaxis], _rodarr[i][abc][2].coord[j]);
-    //                 overlaps=false;
-    //                 //cout << "Repeat?";
-    //             }
-    //             overlaps=true;
-    //             while (overlaps){
-    //                 _rodarr[j][2][abc].coord[crossaxis] = atob(0, _b_array[crossaxis][2]);
-    //                 _rodarr[j][2][abc].coord[i] = atob(0, _b_array[i][abc]);
-    //                 //TODO overlaps= testTracerOverlap(crossaxis, i, _rodarr[j][2][abc].coord[crossaxis], _rodarr[j][2][abc].coord[i]);
-    //                 overlaps=false;
-    //             }
-    //         }
-    //     }
-    //     else{
-    //         rotate_right(_rodarr[j]);
-    //         for (int abc=0;abc<3;abc++){
-    //             rotate_right(_rodarr[i][abc]);
-    //             // new rod positions
-    //             overlaps=true;
-    //             while (overlaps){
-    //                 _rodarr[i][abc][0].coord[crossaxis] = atob(0.,_b_array[crossaxis][0]);
-    //                 _rodarr[i][abc][0].coord[j] = atob(0.,_b_array[j][abc]);
-    //                 //TODO overlaps= testTracerOverlap(crossaxis, j, _rodarr[i][abc][0].coord[crossaxis], _rodarr[i][abc][0].coord[j]);
-    //                 overlaps=false;
-    //             }
-    //             overlaps=true;
-    //             while (overlaps){
-    //                 _rodarr[j][0][abc].coord[crossaxis] = atob(0.,_b_array[crossaxis][0]);
-    //                 _rodarr[j][0][abc].coord[i] = atob(0.,_b_array[i][abc]);
-    //                 //TODO overlaps= testTracerOverlap(crossaxis, i, -_b_array[crossaxis][0]+_rodarr[j][0][abc].coord[crossaxis], _rodarr[j][0][abc].coord[i]);
-    //                 overlaps=false;
-    //             }
-    //         }
-    //     }
-    // }
-
-//     void initRodsRel(){
-//         int i,j;
-//         double xipos, xjpos, cellInterval_ai, cellInterval_aj;
-//         for (int axis=0;axis<3;axis++){//axis 0 is x axis.
-//             i = axis +1;
-//             if (i==3) i=0;
-//             j=3-(i+axis);
-//             for (int abc=0;abc<3;abc++){//for i = axis + 1
-//                 for (int def=0;def<3;def++){// for j = axis + 2
-//                     xipos = atob(0,_b_array[i][abc]);
-//                     xjpos = atob(0,_b_array[j][def]);
-//                     if ((abc ==1) && (def == 1)){
-//                         // In the central cell, the polymer goes to the origin, so that the particle has space to fit
-//                         xipos = 0;
-//                         xjpos = 0;
-//                     }
-//                     //TODO
-//                     // if ((abc ==1) && (def == 2)){
-// //                         // The particle should have at least one escape path, so that it does net get stuck right from the start
-// //                         xipos = 0;
-// //                         xjpos = _b_array[j][1] + _b_array[j][2];
-// //                     }
-//                     _rodarr[axis][abc][def] = CRod(axis, xipos, xjpos );
-//                 }
-//             }
-//             ifdebug(
-//                 cout << axis << endl;
-//                 prinRodPos(axis);
-//             )
-//         }
-//     }
 
 
 };

@@ -8,9 +8,8 @@ using namespace Eigen;
 CConfiguration::CConfiguration(){
 }
 
-CConfiguration::CConfiguration(
-        string distribution, double timestep,  double potRange,  double potStrength, const bool rand,
-        double psize, const bool posHisto, const bool steric, const bool ranU, bool ranRod, double dvar, double polydiam, string peptide){
+CConfiguration::CConfiguration(double timestep,  double potRange,  double potStrength,
+        double psize, const bool posHisto, const bool steric, const bool ranU, double dvar, double polydiam, string peptide, double uDebye){
     setRanNumberGen(0);
     _potRange = potRange;
     _potStrength = potStrength;
@@ -21,11 +20,10 @@ CConfiguration::CConfiguration(
     _cylLJSq = pow(_pradius + _polyrad,2);
     _cutoffExpSq = pow(8*_potRange,2);
     _timestep = timestep;
-    _ranRod = ranRod;
     _LJPot = (steric == false) && (psize != 0);
     _ranU = ranU;
-    _rand = rand;
     _dvar = dvar;
+    _uDebye = uDebye;
     _upot = 0;
     _mu_sto = sqrt( 2 * _timestep );                 //timestep for stochastic force
     //Spring interaction
@@ -38,47 +36,13 @@ CConfiguration::CConfiguration(
         _boxCoord[i] = 0;
         _prevpos(i) = _ppos(i);
     }
-    if (distribution=="gamma"){
-       cout << "_alpha = " << _alpha << endl;
-    }
-    else if (distribution == "gamma2"){
-        _alpha = 5.; _beta = 2.;
-       cout << "_alpha = " << _alpha << endl;
-    }
-    else if (distribution == "gamma4"){
-        _alpha = 2.5; _beta = 4.;
-       cout << "_alpha = " << _alpha << endl;
-    }
-    else if (distribution == "fixb" ){
-       _fixb = true;
-       cout << "-----> b fixed !" << endl;
-    }
-    else {
-        cout << "Invalid distribution!\nAborting!!!!!!!!!!" << endl;
-        abort();
-    }
 
-    //TODO del
-    //testgamma();
-    initRanb();
 
-    if (_ranRod){
-        //TODO rel
-        initRodsArr();
-        //initRodsRel();
-    }
-    if (_rand){
-        cout << "init Rand..." << endl;
-        initRand();
-    }
-    if (peptide=="test"){
-        initBeads();
-    }
-    else {
-        _beads.clear();
-        _beads.push_back(CBead(1,_ppos));
-        _N_beads = 1;
-    }
+    cout << "init Rand..." << endl;
+    initRand();
+
+    initPeptide(peptide);
+
 }
 
 void CConfiguration::updateStartpos(){
@@ -137,12 +101,12 @@ void CConfiguration::checkBoxCrossing(){
     int exitmarker = 0;
     for (int i = 0; i < 3; i++){
         exitmarker =0;
-        if (_ppos(i) < -0.05*_b_array[i][0]){//Only create new rod config if the particle has crossed the border by a certain fraction
-            _ppos(i) += _b_array[i][0];
-            _boxCoord[i] -= _b_array[i][0];
+        if (_ppos(i) < -0.05*_boxsize[i]){//Only create new rod config if the particle has crossed the border by a certain fraction
+            _ppos(i) += _boxsize[i];
+            _boxCoord[i] -= _boxsize[i];
             exitmarker = -1;
         }
-        else if (_ppos(i) > 1.05*_b_array[i][2]){//Only create new rod config if the particle has crossed the border by a certain fraction
+        else if (_ppos(i) > 1.05*_boxsize[i]){//Only create new rod config if the particle has crossed the border by a certain fraction
             _ppos(i) -= _boxsize[i];
             _boxCoord[i] += _boxsize[i];
             exitmarker = 1;
@@ -155,19 +119,11 @@ void CConfiguration::checkBoxCrossing(){
             }
         }
         if (exitmarker!=0){
-            updateRanb(i,exitmarker);
-            if (_rand){
-                updateRand(i,exitmarker);
-                ifdebug(
-                    cout << "[["<<i<<"," << exitmarker <<"] ";
-                    prinRodPos(0); // cout print rod pos!
-                )
-            }
-            if (_ranRod){
-                //TODO rel
-                updateRodsArr(i, exitmarker);
-                //updateRodsRel(i, exitmarker);
-            }
+            updateRand(i,exitmarker);
+            ifdebug(
+                cout << "[["<<i<<"," << exitmarker <<"] ";
+                prinRodPos(0); // cout print rod pos!
+            )
             if (_ranU){
                 for (auto & vrods : _drods[i]){
                     for (auto & rod :  vrods){
@@ -235,50 +191,16 @@ void CConfiguration::calcMobilityForces(){
                 z1inv = 1./z1;
             }
 
-            if (_ranRod){
-                for (int abc=0;abc<3;abc++){
-                    for (int def=0;def<3;def++){
-                        r_i = bead.pos(i) - _rodarr[plane][abc][def].coord(i);
-                        r_k = bead.pos(k) - _rodarr[plane][abc][def].coord(k);
-                        ri_arr[cnt]=(r_i);
-                        rk_arr[cnt]=(r_k);
-                        rSq_arr[cnt]=( r_i * r_i + r_k * r_k);
-                        cnt++;
-                    }
+            for (int abcd=0;abcd<4;abcd++){
+                for (int efgh=0;efgh<4;efgh++){
+                    r_i = bead.pos(i) - _drods[plane][abcd][efgh].coord(i);
+                    r_k = bead.pos(k) - _drods[plane][abcd][efgh].coord(k);
+                    ri_arr[cnt]=(r_i);
+                    rk_arr[cnt]=(r_k);
+                    rSq_arr[cnt]=( r_i * r_i + r_k * r_k);
+                    cnt++;
                 }
             }
-            else if (_rand){
-                for (int abcd=0;abcd<4;abcd++){
-                    for (int efgh=0;efgh<4;efgh++){
-                        r_i = bead.pos(i) - _drods[plane][abcd][efgh].coord(i);
-                        r_k = bead.pos(k) - _drods[plane][abcd][efgh].coord(k);
-                        ri_arr[cnt]=(r_i);
-                        rk_arr[cnt]=(r_k);
-                        rSq_arr[cnt]=( r_i * r_i + r_k * r_k);
-                        cnt++;
-                    }
-                }
-            }
-            else{
-                //This creates the distance vectors from the rods to the tracer
-                r_ks[0] = bead.pos(k) + _b_array[k][0];
-                r_is[0] = bead.pos(i) + _b_array[i][0];
-                for (int rodi = 0; rodi < 3; rodi++){
-                    r_ks[rodi+1] = r_ks[rodi] - _b_array[k][rodi];
-                    r_is[rodi+1] = r_is[rodi] - _b_array[i][rodi];
-                }
-                for (int nk = 0; nk < r_ks.size(); nk++){
-                    for (int ni = 0; ni < r_is.size(); ni++){
-                        r_i = r_is[ni];
-                        r_k = r_ks[nk];
-                        ri_arr[cnt]=(r_i);
-                        rk_arr[cnt]=(r_k);
-                        rSq_arr[cnt]=( r_i * r_i + r_k * r_k);
-                        cnt++;
-                    }
-                }
-            }
-        
             //TODO distarr[i] = rSq_arr; //store distances for writing them to a file later
             for (int j=0;j<cnt;j++){
                 const double rSq = rSq_arr.at(j);
@@ -395,7 +317,7 @@ void CConfiguration::saveXYZTraj(string name, int move, string flag) {
         }
     }
 
-    fprintf(m_traj_file, "%d\n%s (%8.3f %8.3f %8.3f) t=%u \n", _N_beads, "sim_name", _boxsize, _boxsize, _boxsize, move);
+    fprintf(m_traj_file, "%d\n%s (%8.3f %8.3f %8.3f) t=%u \n", _N_beads, "sim_name", _boxsize[0], _boxsize[1], _boxsize[1], move);
 
 
     // Beads
@@ -480,59 +402,31 @@ void CConfiguration::modifyPot(double& U, double& Fr, double weight){
 
 //****************************STERIC HINDRANCE****************************************************//
 
-bool CConfiguration::testOverlap(){//TODO relRod
+bool CConfiguration::testOverlap(){//TODO define for 
     //Function to check, whether the diffusing particle of size psize is overlapping with any one of the rods (edges of the box)
     //most if borrowed from moveParticleAndWatch()
+    cout << "ERROR! Not defined yet !!!!" << endl;
+    abort();
+
     bool overlaps = false;
     double r_i = 0, r_k = 0;
     double r_abs = 0;
 
-    if (_ranRod){
-        int i,j;
-        for (int axis=0;axis<3;axis++){
-            for (int abc=0;abc<_rodarr[axis].size();abc++){
-                for (int def=0;def<_rodarr[axis].size();def++){
-                    i = axis +1;
-                    if (i==3) i=0;
-                    j=3-(i+axis);
-                    if (testTracerOverlap(i, j, _rodarr[axis][abc][def].coord(i), _rodarr[axis][abc][def].coord(j))){
-                        ifdebug(cout << "Overlap for\naxis" << axis << "\nabc " << abc << "\ndef " << def << endl;)
-                        return true;
-                    }
+    int i,j;
+    for (int axis=0;axis<3;axis++){
+        for (int abc=0;abc<_drods[axis].size();abc++){
+            for (int def=0;def<_drods[axis].size();def++){
+                i = axis +1;
+                if (i==3) i=0;
+                j=3-(i+axis);
+                if (testTracerOverlap(i, j, _drods[axis][abc][def].coord(i), _drods[axis][abc][def].coord(j))){
+                    ifdebug(cout << "Overlap for\naxis" << axis << "\nabc " << abc << "\ndef " << def << endl;)
+                    return true;
                 }
             }
         }
     }
-    else if (_rand){
-        int i,j;
-        for (int axis=0;axis<3;axis++){
-            for (int abc=0;abc<_drods[axis].size();abc++){
-                for (int def=0;def<_drods[axis].size();def++){
-                    i = axis +1;
-                    if (i==3) i=0;
-                    j=3-(i+axis);
-                    if (testTracerOverlap(i, j, _drods[axis][abc][def].coord(i), _drods[axis][abc][def].coord(j))){
-                        ifdebug(cout << "Overlap for\naxis" << axis << "\nabc " << abc << "\ndef " << def << endl;)
-                        return true;
-                    }
-                }
-            }
-        }
-    }
-    else{
-        for (int i = 0; i < 2; i++){
-            for (int k = i+1; k < 3; k++){
-                for (int ni = 0; ni < 2; ni++){
-                    for (int nk = 0; nk < 2; nk++){
-                        r_i = _ppos(i) - ni*_boxsize[i];
-                        r_k = _ppos(k) - nk*_boxsize[k];
-                        r_abs = sqrt(r_i * r_i + r_k * r_k); //distance to the rods
-                        if (r_abs < _pradius) overlaps = true;
-                    }
-                }
-            }
-        }
-    }
+    
     return overlaps;
 }
 

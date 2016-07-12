@@ -31,15 +31,15 @@ size_t sizeOfArray( const T(&)[ N ] )
 
 
 string createDataFolder(double timestep, double simtime, double potRange, double potStrength,
-                        double particlesize, bool steric, bool ranU, double dvar, double polydiam, string peptide){
+                        double particlesize, bool steric, bool ranU, double dvar, double polydiam, string peptide, double uDebye){
     //NOTE: Maybe I can leave out dt, as soon as I settled on a timestep
     //NOTE: As soon as I create input-list with variables, I must change this function
     char range[5];
     sprintf(range, "%.3f", potRange);
     //In the definition of folder, the addition has to START WITH A STRING! for the compiler to know what to do (left to right).
     string folder = "sim_data";
-    folder += peptide;
-    if (ranU) folder +=+ "/ranU";
+    folder += "/" + peptide;
+    if (ranU) folder += "/ranU";
     if (steric) folder = folder + "/steric"; 
     folder += "/d" + toString(dvar);
     folder = folder
@@ -47,6 +47,7 @@ string createDataFolder(double timestep, double simtime, double potRange, double
             + "/t" + toString(simtime)
             + "/a" + toString(polydiam)
             + "/p" + toString(particlesize)
+            + "/uD" + toString(uDebye)
             + "/k" + range
             + "/u" + toString(potStrength);
     boost::filesystem::create_directories(folder);
@@ -57,7 +58,7 @@ string createDataFolder(double timestep, double simtime, double potRange, double
 
 
 void settingsFile(string folder, double particlesize, double timestep, double runs, double steps, double potStrength, double potRange,
-        bool recordMFP, bool steric, bool ranU, double dvar, double polydiam, string peptide){
+        bool recordMFP, bool steric, bool ranU, double dvar, double polydiam, string peptide, double uDebye){
     //Creates a file where the simulation settings are stored
     //MAYBE ALSO INCLUDE TIME AND DATE!!
     ofstream settingsfile;
@@ -72,6 +73,7 @@ void settingsFile(string folder, double particlesize, double timestep, double ru
     settingsfile << "k " << potRange << endl << "U_0 " << potStrength << endl;
     settingsfile << "dvar " << dvar << endl;
     settingsfile << "a " << polydiam << endl;
+    settingsfile << "uDebye " << uDebye << endl;
 
     settingsfile.close();
 }

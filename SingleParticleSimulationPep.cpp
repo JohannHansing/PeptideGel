@@ -11,9 +11,9 @@ int main(int argc, const char* argv[]){
     //NOTE: so far saving Instant Values for each tenth step!
 
     //TRIGGERS:
-    //string distribution = argv[1];    // TODO
-    //bool ranRod = (strcmp(argv[2] , "true") == 0 ) ;
-    //bool rand = (strcmp(argv[3] , "true") == 0 ) ;
+    string distribution = argv[1];    // TODO
+    bool ranRod = (strcmp(argv[2] , "true") == 0 ) ;
+    bool rand = (strcmp(argv[3] , "true") == 0 ) ;
     bool recordMFP = (strcmp(argv[4] , "true") == 0 ) ;
     bool recordPosHisto = (strcmp(argv[5] , "true") == 0 ) ;
     bool includeSteric = (strcmp(argv[6] , "true") == 0 ) ;  // steric 2
@@ -42,6 +42,7 @@ int main(int argc, const char* argv[]){
     double ustrength = atof( argv[boolpar+6] );
     double dvar = atof( argv[boolpar+7] );
     double polydiam = atof( argv[boolpar+8] );
+    double uDebye = atof( argv[boolpar+9] );
     unsigned int saveInt;
     int instValIndex;                             //Counter for addInstantValue
 
@@ -54,26 +55,16 @@ int main(int argc, const char* argv[]){
 
     cout << "--- PEPTIDE is " << peptide << endl;
 
-    if (distribution != "fixb" && rand){
-        cout << "b needs to be fixed at this time to include rand!" << endl;
-        abort();
-    }
-    if (peptide != "test" && peptide != "single"){
-        cout << "Bad peptide name!" << endl;
-        abort();
-    }
-    if (ranRod  && rand){
-        cout << "Cant have both rand and ranRod!" << endl;
-        abort();
-    }
-    if (ranRod  && ranU){
-        cout << "ranRod + ranU will not work properly due to definition of calcMobilityForces for ranU!" << endl;
-        abort();
-    }
+    
+    //initialize instance of configuration
+    CConfiguration conf = CConfiguration(timestep, urange, ustrength, particlesize, recordPosHisto, 
+                            includeSteric, ranU, dvar,polydiam, peptide, uDebye);
+    ifdebug(cout << "created CConf conf. ";)
+    
 
     //Create data folders and print location as string to string "folder"
-    string folder = createDataFolder(distribution, timestep, simtime, urange, ustrength, particlesize, includeSteric, ranU, 
-                             dvar,polydiam, peptide);
+    string folder = createDataFolder(timestep, simtime, urange, ustrength, particlesize, includeSteric, ranU, 
+                             dvar,polydiam, peptide, uDebye);
     ifdebug(cout << "created folder. ";)
     cout << "writing to folder " << folder << endl;
 
@@ -83,11 +74,6 @@ int main(int argc, const char* argv[]){
     CAverage squareDisp = CAverage("squaredisp", folder, instantvalues, runs);
     ifdebug(cout << "created CAverage files. ";)
 
-    //initialize instance of configuration
-    CConfiguration conf = CConfiguration(distribution,timestep, urange, ustrength, rand, particlesize, recordPosHisto, 
-                            includeSteric, ranU, ranRod, dvar,polydiam, peptide);
-    ifdebug(cout << "created CConf conf. ";)
-
 
     unsigned int stepcount = 0;
     ofstream trajectoryfile;
@@ -95,10 +81,11 @@ int main(int argc, const char* argv[]){
     
     ofstream distancesfile;
     // TODO distancefile
-    distancesfile.open((folder + "/Coordinates/squareDistances.txt").c_str());
+    // NEED TO DEFINE BEHAVIOR OF SAVING DISTANCES IN CCONF
+    //distancesfile.open((folder + "/Coordinates/squareDistances.txt").c_str());
     
-    settingsFile(folder, ranRod, particlesize, timestep, runs, steps, ustrength, urange, rand, recordMFP, includeSteric, ranU, distribution, 
-                    dvar, polydiam, peptide);
+    settingsFile(folder, particlesize, timestep, runs, steps, ustrength, urange, recordMFP, includeSteric, ranU,  
+                    dvar, polydiam, peptide, uDebye);
                     
     //create .xyz file to save the trajectory for VMD
     string traj_file = folder + "/Coordinates/single_traj.xyz";
@@ -155,7 +142,7 @@ int main(int argc, const char* argv[]){
                 trajectoryfile << fixed << stepcount * timestep << "\t" << ppos[0] << " " << ppos[1] << " " << ppos[2] << endl;
                 ifdebug(cout << stepcount * timestep << "\t" << ppos[0] << " " << ppos[1] << " " << ppos[2] << endl;)
                 //TODO pass distancefile to function in conf.
-                if (stepcount%(100*trajout) == 0) conf.writeDistances( distancesfile, stepcount);
+                //if (stepcount%(100*trajout) == 0) conf.writeDistances( distancesfile, stepcount);
             }
             
             if (((i+1)%100 == 0) && (l == 0)){       //Save the first trajectory to file
@@ -188,7 +175,7 @@ int main(int argc, const char* argv[]){
 
     trajectoryfile.close();
     // TODO distancefile
-    distancesfile.close();
+    //distancesfile.close();
 
     return 0;
 }
