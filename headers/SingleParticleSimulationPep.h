@@ -30,20 +30,18 @@ size_t sizeOfArray( const T(&)[ N ] )
 }
 
 
-string createDataFolder(string distribution, double timestep, double simtime, double potRange, double potStrength,
-                        double particlesize, bool steric, bool ranRod, bool ranU, bool rand, double dvar, double polydiam, string peptide){
+string createDataFolder(double timestep, double simtime, double potRange, double potStrength,
+                        double particlesize, bool steric, bool ranU, double dvar, double polydiam, string peptide){
     //NOTE: Maybe I can leave out dt, as soon as I settled on a timestep
     //NOTE: As soon as I create input-list with variables, I must change this function
     char range[5];
     sprintf(range, "%.3f", potRange);
     //In the definition of folder, the addition has to START WITH A STRING! for the compiler to know what to do (left to right).
     string folder = "sim_data";
-    if (peptide!="single") folder += "/peptide/" + peptide;
-    if (ranU) folder = folder + "/ranU";
-    if (ranRod) folder += "/ranRod";
-    if (rand) folder += "/rand/d" + toString(dvar);
-    folder += "/" + distribution;
-    if (steric) folder = folder + "/steric";    //TODO steric2
+    folder += peptide;
+    if (ranU) folder +=+ "/ranU";
+    if (steric) folder = folder + "/steric"; 
+    folder += "/d" + toString(dvar);
     folder = folder
             + "/dt" + toString(timestep)
             + "/t" + toString(simtime)
@@ -58,18 +56,15 @@ string createDataFolder(string distribution, double timestep, double simtime, do
 }
 
 
-void settingsFile(string folder, bool ranRod, double particlesize, double timestep, double runs, double steps, double potStrength, double potRange,
-        bool rand, bool recordMFP, bool steric, bool ranU, string distribution, double dvar, double polydiam, string peptide){
+void settingsFile(string folder, double particlesize, double timestep, double runs, double steps, double potStrength, double potRange,
+        bool recordMFP, bool steric, bool ranU, double dvar, double polydiam, string peptide){
     //Creates a file where the simulation settings are stored
     //MAYBE ALSO INCLUDE TIME AND DATE!!
     ofstream settingsfile;
     settingsfile.open((folder + "/sim_Settings.txt").c_str());
     settingsfile << "Sim dir: " << folder << endl;
     settingsfile << "Peptide " << peptide << endl;
-    settingsfile << "Pore Distribution " << distribution << endl;
-    settingsfile << "ranRod " << ranRod << endl;
     settingsfile << "TMP " << recordMFP << endl;//" (Bessel)" << endl;  //TODO Bessel!
-    settingsfile << "rand " << rand << endl;
     settingsfile << "includesteric " << steric << endl;
     settingsfile << "ranU " << ranU  << endl;
     settingsfile << "p " << particlesize << endl;

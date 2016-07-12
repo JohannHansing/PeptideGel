@@ -1,4 +1,4 @@
-#include "headers/SingleParticleSimulationRanb.h"
+#include "headers/SingleParticleSimulationPep.h"
 
 using namespace std;
 
@@ -11,9 +11,9 @@ int main(int argc, const char* argv[]){
     //NOTE: so far saving Instant Values for each tenth step!
 
     //TRIGGERS:
-    string distribution = argv[1];    // TODO
-    bool ranRod = (strcmp(argv[2] , "true") == 0 ) ;
-    bool rand = (strcmp(argv[3] , "true") == 0 ) ;       //BESSEL TODO
+    //string distribution = argv[1];    // TODO
+    //bool ranRod = (strcmp(argv[2] , "true") == 0 ) ;
+    //bool rand = (strcmp(argv[3] , "true") == 0 ) ;
     bool recordMFP = (strcmp(argv[4] , "true") == 0 ) ;
     bool recordPosHisto = (strcmp(argv[5] , "true") == 0 ) ;
     bool includeSteric = (strcmp(argv[6] , "true") == 0 ) ;  // steric 2
@@ -52,7 +52,6 @@ int main(int argc, const char* argv[]){
 
     ifdebug(cout << "copied  params. ";)
 
-    cout << "distribution " << distribution << endl;
     cout << "--- PEPTIDE is " << peptide << endl;
 
     if (distribution != "fixb" && rand){
@@ -73,7 +72,7 @@ int main(int argc, const char* argv[]){
     }
 
     //Create data folders and print location as string to string "folder"
-    string folder = createDataFolder(distribution, timestep, simtime, urange, ustrength, particlesize, includeSteric, ranRod, ranU, rand, 
+    string folder = createDataFolder(distribution, timestep, simtime, urange, ustrength, particlesize, includeSteric, ranU, 
                              dvar,polydiam, peptide);
     ifdebug(cout << "created folder. ";)
     cout << "writing to folder " << folder << endl;
