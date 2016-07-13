@@ -158,6 +158,13 @@ int main(int argc, const char* argv[]){
             settingsFile(folder, trigger, particlesize, timestep, runs, steps, ustrength, urange, recordMFP, includeSteric, ranU,  
                             dvar, polydiam, peptide, uDebye, badsteps);
         }
+        
+        if (badsteps>10000){//if about one out of 100,000 steps is registered as badstep, assuming that the code is running for at least 500 runs
+            ofstream warnfile;
+            warnfile.open((folder + "/WARNING.txt").c_str());
+            warnfile << "High number of badsteps: " << badsteps << endl;
+            warnfile.close();
+        }
 
 
     }//----------END OF RUNS-LOOP
