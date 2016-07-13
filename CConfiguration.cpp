@@ -170,65 +170,65 @@ void CConfiguration::calcMobilityForces(){
         bead.upot = 0.;
 
         if (!_noCyl){
-        for (int i = 0; i < 3; i++){
-            unsigned int cnt=0;// counter to loop over array indices
-            int k = i + 1;   //k always one direction "further", i.e. if i = 0 = x-direction, then k = 1 = y-direction
-            if ( k == 3 ) k = 0;
-            int plane = 3 - (i+k); //this is the current plane of the cylindrical coordinates
-            int n = 0;     // reset counter for index of next rod in plane  n = 0, 1, 2, 3 -> only needed for ranPot
-            double z1, z2, z1inv;
-            if (_ranU){
-                z1 = 0.25 * _boxsize[plane];
-                z2 = _boxsize[plane] - z1;   //z is in cylindrical coordinates. This indicates above/below which value the exp potential is modifed for random signs.
-                z1inv = 1./z1;
-            }
-
-            for (int abcd=0;abcd<4;abcd++){
-                for (int efgh=0;efgh<4;efgh++){
-                    r_i = bead.pos(i) - _drods[plane][abcd][efgh].coord(i);
-                    r_k = bead.pos(k) - _drods[plane][abcd][efgh].coord(k);
-                    ri_arr[cnt]=(r_i);
-                    rk_arr[cnt]=(r_k);
-                    rSq_arr[cnt]=( r_i * r_i + r_k * r_k);
-                    cnt++;
+            for (int i = 0; i < 3; i++){
+                unsigned int cnt=0;// counter to loop over array indices
+                int k = i + 1;   //k always one direction "further", i.e. if i = 0 = x-direction, then k = 1 = y-direction
+                if ( k == 3 ) k = 0;
+                int plane = 3 - (i+k); //this is the current plane of the cylindrical coordinates
+                int n = 0;     // reset counter for index of next rod in plane  n = 0, 1, 2, 3 -> only needed for ranPot
+                double z1, z2, z1inv;
+                if (_ranU){
+                    z1 = 0.25 * _boxsize[plane];
+                    z2 = _boxsize[plane] - z1;   //z is in cylindrical coordinates. This indicates above/below which value the exp potential is modifed for random signs.
+                    z1inv = 1./z1;
                 }
-            }
-            //TODO distarr[i] = rSq_arr; //store distances for writing them to a file later
-            for (int j=0;j<cnt;j++){
-                const double rSq = rSq_arr.at(j);
-                calculateExpPotential(rSq, utmp, frtmp, bead.sign);
+
+                for (int abcd=0;abcd<4;abcd++){
+                    for (int efgh=0;efgh<4;efgh++){
+                        r_i = bead.pos(i) - _drods[plane][abcd][efgh].coord(i);
+                        r_k = bead.pos(k) - _drods[plane][abcd][efgh].coord(k);
+                        ri_arr[cnt]=(r_i);
+                        rk_arr[cnt]=(r_k);
+                        rSq_arr[cnt]=( r_i * r_i + r_k * r_k);
+                        cnt++;
+                    }
+                }
+                //TODO distarr[i] = rSq_arr; //store distances for writing them to a file later
+                for (int j=0;j<cnt;j++){
+                    const double rSq = rSq_arr.at(j);
+                    calculateExpPotential(rSq, utmp, frtmp, bead.sign);
 
             
-                if (_ranU){
-                    int abcd = j/4; // This could be made more efficient by replacing the j loop with two loops abcd efgh and a counter j
-                    int efgh = j%4;
-                    int sign = _drods[plane][abcd][efgh].signs[1];
-                    //cout << "abcd " << abcd << "efgh " << efgh << " sign: " << sign << endl;
-                    utmp *= sign;
-                    frtmp *= sign;
-                    if (bead.pos(plane) > z2){
-                        if (! _drods[plane][abcd][efgh].samesign[1]){
-                            bead.f_mob(plane) += utmp * z1inv;              //this takes care of the derivative of the potential modification and resulting force
-                            modifyPot(utmp, frtmp, (_boxsize[plane] - bead.pos(plane)) * z1inv);
+                    if (_ranU){
+                        int abcd = j/4; // This could be made more efficient by replacing the j loop with two loops abcd efgh and a counter j
+                        int efgh = j%4;
+                        int sign = _drods[plane][abcd][efgh].signs[1];
+                        //cout << "abcd " << abcd << "efgh " << efgh << " sign: " << sign << endl;
+                        utmp *= sign;
+                        frtmp *= sign;
+                        if (bead.pos(plane) > z2){
+                            if (! _drods[plane][abcd][efgh].samesign[1]){
+                                bead.f_mob(plane) += utmp * z1inv;              //this takes care of the derivative of the potential modification and resulting force
+                                modifyPot(utmp, frtmp, (_boxsize[plane] - bead.pos(plane)) * z1inv);
+                            }
+                        }
+                        else if (bead.pos(plane) < z1){
+                            if (! _drods[plane][abcd][efgh].samesign[0]){
+                                bead.f_mob(plane) -= utmp * z1inv;              //this takes care of the derivative of the potential modification and resulting force
+                                modifyPot(utmp, frtmp, bead.pos(plane) * z1inv);
+                            }
                         }
                     }
-                    else if (bead.pos(plane) < z1){
-                        if (! _drods[plane][abcd][efgh].samesign[0]){
-                            bead.f_mob(plane) -= utmp * z1inv;              //this takes care of the derivative of the potential modification and resulting force
-                            modifyPot(utmp, frtmp, bead.pos(plane) * z1inv);
-                        }
-                    }
+
+                    if (_LJPot && ( rSq < rcSq )) calcLJPot(rSq, utmp, frtmp, _cylLJSq);
+
+
+                    _uCylTot += utmp;
+                    bead.upot += utmp;
+                    bead.f_mob(i) += frtmp * ri_arr[j];
+                    bead.f_mob(k) += frtmp * rk_arr[j];
                 }
-
-                if (_LJPot && ( rSq < rcSq )) calcLJPot(rSq, utmp, frtmp, _cylLJSq);
-
-
-                _uCylTot += utmp;
-                bead.upot += utmp;
-                bead.f_mob(i) += frtmp * ri_arr[j];
-                bead.f_mob(k) += frtmp * rk_arr[j];
             }
-        }
         }
         //ifdebug(cout << "bead.f_mob \n" << bead.f_mob << endl;)
         ifdebug(cout << "uCylTot " << _uCylTot <<  endl; )
@@ -258,6 +258,7 @@ void CConfiguration::calcBeadInteraction(){//TODO pep
         for (int j=i+1; j < _N_beads; j++){
             double frtmp = 0;
             double utmp = 0;
+            double utot = 0;
             // const double rijSq = _rijSq_arr[cnt];
             // const Vector3d rvec = _rij_vec_arr[cnt];
             const Vector3d rvec = _beads[j].pos - _beads[i].pos;
@@ -269,6 +270,7 @@ void CConfiguration::calcBeadInteraction(){//TODO pep
             if ( rijSq <  1.25992 * beadLJSq ) {
                 calcLJPot(rijSq, utmp, frtmp, beadLJSq);
                 _uLJ += utmp;
+                utot += utmp;
             }
             
             // DEBYE
@@ -276,6 +278,7 @@ void CConfiguration::calcBeadInteraction(){//TODO pep
                 rij = sqrt(rijSq);
                 calcDebyePot(rij, utmp, frtmp, debyeTrig);
                 _uDebye += utmp;
+                utot += utmp;
             }
             
             // SPRING
@@ -284,10 +287,11 @@ void CConfiguration::calcBeadInteraction(){//TODO pep
                 if (rij==0) rij = sqrt(rijSq);
                 calcSpringPot(rij, utmp, frtmp);
                 _uSpring += utmp;
+                utot += utmp;
             }
             faddtmp = frtmp * rvec;
-            _beads[i].upot += utmp;
-            _beads[j].upot += utmp;
+            _beads[i].upot += utot;
+            _beads[j].upot += utot;
             _beads[i].f_mob += - faddtmp ;
             _beads[j].f_mob += faddtmp;
             
