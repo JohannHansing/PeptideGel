@@ -146,7 +146,8 @@ int main(int argc, const char* argv[]){
             }
             
             if (((i+1)%100 == 0) && (l == 0)){       //Save the first trajectory to file
-                conf.saveXYZTraj(traj_file, i, "a");                    // TODO change back ((i+1)%XXX == 0) to 100
+                //TODO XYZ traj
+                //conf.saveXYZTraj(traj_file, i, "a");                    // TODO change back ((i+1)%XXX == 0) to 100
             }
         }
         if (l==0) conf.saveXYZTraj(traj_file, steps, "c"); // Close XYZ traj_file
