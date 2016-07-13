@@ -59,12 +59,13 @@ string createDataFolder(string trigger, double timestep, double simtime, double 
 
 
 void settingsFile(string folder, string trigger, double particlesize, double timestep, double runs, double steps, double potStrength, double potRange,
-        bool recordMFP, bool steric, bool ranU, double dvar, double polydiam, string peptide, double uDebye){
+        bool recordMFP, bool steric, bool ranU, double dvar, double polydiam, string peptide, double uDebye, int badsteps){
     //Creates a file where the simulation settings are stored
     //MAYBE ALSO INCLUDE TIME AND DATE!!
     ofstream settingsfile;
     settingsfile.open((folder + "/sim_Settings.txt").c_str());
-    settingsfile << "Sim dir: " << folder << endl;
+    settingsfile << "Sim dir: " << folder << endl;    
+    settingsfile << "trigger: " << trigger << endl;   
     settingsfile << "Peptide " << peptide << endl;
     settingsfile << "TMP " << recordMFP << endl;//" (Bessel)" << endl;  //TODO Bessel!
     settingsfile << "includesteric " << steric << endl;
@@ -74,8 +75,8 @@ void settingsFile(string folder, string trigger, double particlesize, double tim
     settingsfile << "k " << potRange << endl << "U_0 " << potStrength << endl;
     settingsfile << "dvar " << dvar << endl;
     settingsfile << "a " << polydiam << endl;
-    settingsfile << "uDebye " << uDebye << endl;    
-    settingsfile << "trigger: " << trigger << endl;
+    settingsfile << "uDebye " << uDebye << endl; 
+    settingsfile << "\nBADSTEPS " << badsteps << endl;
 
 
     settingsfile.close();

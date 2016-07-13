@@ -190,6 +190,7 @@ private:
     double _r0SP; //equilirbium distance of beads for peptide is defined by LJ pot minimum
     double _kappaSP = 100;
     double _uSpring;
+    double _uCylTot;
     
     //DEBYE potential
     double _uDebye;
@@ -456,7 +457,7 @@ public:
     CConfiguration(string trigger, double timestep,  double potRange,  double potStrength, 
         double psize, const bool posHisto, const bool steric, const bool ranU, double dvar, double polydiam, string peptide, double uDebye);
     void updateStartpos();
-    void makeStep();
+    int makeStep();
     void checkBoxCrossing();
     void calcStochasticForces();
     void calcMobilityForces();

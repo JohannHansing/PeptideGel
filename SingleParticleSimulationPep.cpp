@@ -45,6 +45,7 @@ int main(int argc, const char* argv[]){
     double uDebye = atof( argv[boolpar+9] );
     unsigned int saveInt;
     int instValCount = 0;                             //Counter for addInstantValue
+    int badsteps = 0;                                 //Count how many times bead displacement had to be adjusted
 
     steps = simtime/timestep;
     saveInt = steps/instantvalues;
@@ -87,7 +88,7 @@ int main(int argc, const char* argv[]){
     //distancesfile.open((folder + "/Coordinates/squareDistances.txt").c_str());
     
     settingsFile(folder, trigger, particlesize, timestep, runs, steps, ustrength, urange, recordMFP, includeSteric, ranU,  
-                    dvar, polydiam, peptide, uDebye);
+                    dvar, polydiam, peptide, uDebye, badsteps);
                     
     //create .xyz file to save the trajectory for VMD
     string traj_file = folder + "/Coordinates/single_traj.xyz";
@@ -117,8 +118,8 @@ int main(int argc, const char* argv[]){
                 instValCount += 1;
             }
 
-
-            conf.makeStep();    //move particle at the end of iteration
+            //move particles
+            badsteps += conf.makeStep();
 
             /*
             if (includeSteric && conf.testOverlap()) conf.moveBack();   //TODO steric2
@@ -153,13 +154,12 @@ int main(int argc, const char* argv[]){
         if (l%100 == 0){
             cout << "run " << l << endl;
             energyU.saveAverageInstantValues(instValCount);
+            settingsFile(folder, trigger, particlesize, timestep, runs, steps, ustrength, urange, recordMFP, includeSteric, ranU,  
+                            dvar, polydiam, peptide, uDebye, badsteps);
         }
 
 
     }//----------END OF RUNS-LOOP
-
-
-
 
 
     cout << "Simulation Finished" << endl;

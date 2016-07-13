@@ -24,6 +24,7 @@ private:
 
 public:
     Eigen::Vector3d pos; 
+    Eigen::Vector3d vdisp; 
     Eigen::Vector3d f_mob;   //store mobility and stochastic force
     Eigen::Vector3d f_sto;
     int sign = 1;

@@ -54,30 +54,36 @@ void CConfiguration::updateStartpos(){
     }
 }
 
-
-
-
-//TODO pep
-void CConfiguration::makeStep(){
+int CConfiguration::makeStep(){
     //move the particle according to the forces and record trajectory like watched by outsider
-    _prevpos = _beads[0].pos;
+    double weight = 1.;
+    int output = 0;
     for (auto & bead :  _beads){
-        for (int i = 0; i < 3; i++){
-            const double disp = _timestep * bead.f_mob(i) + _mu_sto * bead.f_sto(i);
-            bead.pos(i) += disp;
-            if (abs(disp) > 5){
-                cout << "**** Way too big jump!\n"
-                        << "\nuDebye = " << _uDebye 
-                            << " -- uspring = " << _uSpring << " -- uLJ beads = " << _uLJ <<  endl;
-            }
-            else if (std::isnan(bead.pos(i))){
-                cout << "axis " << i << "\n_prevpos " << _prevpos(i) << "\n_ppos " << bead.pos(i) << endl;
-                cout << "f_mob[i] " << bead.f_mob(i) << "\nf_sto[i] " << bead.f_sto(i) << endl;
-                abort();
-            }
+        const Vector3d vdisp = _timestep * bead.f_mob + _mu_sto * bead.f_sto;
+        const double dispSq = vdisp.squaredNorm();
+        if (dispSq > 25){
+            double disp_abs = sqrt(dispSq);
+            cout << "**** Way too big jump: disp = " << disp_abs
+                    << "\nuDebye = " << _uDebye << " -- uCylTot " << _uCylTot 
+                        << " -- uspring = " << _uSpring << " -- uLJ beads = " << _uLJ <<  endl;
+            // if the displacement is too large, we try to save the situation by moving only a fraction. 
+            // If this happens only very seldomly, then it should not change the diffusivity.
+            weight = 1./disp_abs;
+            output = 1; //return 1 for counting of how many times this happened
         }
+        else if (std::isnan(dispSq)){
+            cout << "\nError: NAN found!\ndisp\n" << bead.vdisp << "\n_ppos\n" << bead.pos << endl;
+            cout << "f_mob\n" << bead.f_mob<< "\nf_sto[i]\n" << bead.f_sto << endl;
+            abort();
+        }
+        bead.vdisp = vdisp;
+    }
+    // Only displace the beads if all displacements are valid.
+    for (auto & bead :  _beads){
+        bead.pos += bead.vdisp * weight;
     }
     _ppos = _beads[0].pos;
+    return output;
 }
 
 void CConfiguration::checkBoxCrossing(){
@@ -157,7 +163,8 @@ void CConfiguration::calcMobilityForces(){
         array<double,4> r_is, r_ks;
         std::array<double, 16> ri_arr, rk_arr, rSq_arr;
         double r_absSq;
-        double utmp = 0, frtmp = 0, uCylTot = 0;     //temporary "hilfsvariables"
+        double utmp = 0, frtmp = 0;     //temporary "hilfsvariables"
+        _uCylTot = 0;
         //reset mobility forces to zero
         bead.f_mob = Vector3d::Zero();
         bead.upot = 0.;
@@ -215,13 +222,8 @@ void CConfiguration::calcMobilityForces(){
 
                 if (_LJPot && ( rSq < rcSq )) calcLJPot(rSq, utmp, frtmp, _cylLJSq);
 
-                //TODO del
-                if (utmp > 100){
-                    cout << "utmp " << utmp  <<"\nr " << sqrt(rSq) << "\nindex j "  << j << "\nplane " << plane << endl;
-                    cout << "ri " << ri_arr[j] << "\nrk " << rk_arr[j] << endl;
-                }
 
-                uCylTot += utmp;
+                _uCylTot += utmp;
                 bead.upot += utmp;
                 bead.f_mob(i) += frtmp * ri_arr[j];
                 bead.f_mob(k) += frtmp * rk_arr[j];
@@ -229,7 +231,7 @@ void CConfiguration::calcMobilityForces(){
         }
         }
         //ifdebug(cout << "bead.f_mob \n" << bead.f_mob << endl;)
-        ifdebug(cout << "uCylTot " << uCylTot <<  endl; )
+        ifdebug(cout << "uCylTot " << _uCylTot <<  endl; )
     }
     
     if (_N_beads != 1) calcBeadInteraction();
