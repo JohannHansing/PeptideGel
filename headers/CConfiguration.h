@@ -93,14 +93,18 @@ private:
     
     void initPeptide(string peptide){
         //init Beads as array of N beads
-        if (peptide=="3block" || peptide=="3cati" || peptide=="3ani"){
+        if (peptide=="3block" || peptide=="3rep" || peptide=="3att" || peptide=="3neut"){
             _beads.clear();
             const int len = 3;
             std::array<int,len> signs={1,0,1};
             if (peptide=="3block") signs[0]=-1;
-            else if (peptide=="3ani"){
+            else if (peptide=="3att"){
                 signs[0]=-1;
                 signs[2]=-1;
+            }
+            else if (peptide=="3neut"){
+                array<int,len> tmp={0,0,0};
+                signs=tmp;
             }
             Eigen::Vector3d beadpos = _ppos;
             for (int i=0;i<len;i++){
@@ -113,7 +117,7 @@ private:
                     cout << "beadpos\n" << bead.pos << endl;)
             }
         }
-        else if (peptide=="8NNblock" || peptide=="8NNalter" || peptide=="8NNcati" || peptide=="8NNani"){
+        else if (peptide=="8NNblock" || peptide=="8NNalter" || peptide=="8NNrep" || peptide=="8NNatt"){
             _beads.clear();
             const int len = 8;
             std::array<int,len> signs;
@@ -125,11 +129,11 @@ private:
                 array<int,len> tmp={1,-1,1,-1,1,-1,1,-1};
                 signs=tmp;
             }
-            else if (peptide=="8NNcati"){
+            else if (peptide=="8NNrep"){
                 array<int,len> tmp={1,1,1,1,1,1,1,1};
                 signs=tmp;
             }
-            else if (peptide=="8NNani"){
+            else if (peptide=="8NNatt"){
                 array<int,len> tmp={-1,-1,-1,-1,-1,-1,-1,-1};
                 signs=tmp;
             }
@@ -144,7 +148,7 @@ private:
                     cout << "beadpos\n" << bead.pos << endl;)
             }
         }
-        else if (peptide=="11block" || peptide=="11alter" || peptide=="11cati" || peptide=="11ani"){
+        else if (peptide=="11block" || peptide=="11alter" || peptide=="11rep" || peptide=="11att"){
             _beads.clear();
             const int len = 11;
             std::array<int,len> signs;
@@ -156,11 +160,11 @@ private:
                 array<int,len> tmp={1,0,-1,0,1,0,-1,0,1,0,-1};
                 signs=tmp;
             }
-            else if (peptide=="8NNcati"){
+            else if (peptide=="8NNrep"){
                 array<int,len> tmp={1,0,1,0,1,0,1,0,1,0,1};
                 signs=tmp;
             }
-            else if (peptide=="8NNani"){
+            else if (peptide=="8NNatt"){
                 array<int,len> tmp={-1,0,-1,0,-1,0,-1,0,-1,0,-1};
                 signs=tmp;
             }

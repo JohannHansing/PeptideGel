@@ -152,7 +152,7 @@ int main(int argc, const char* argv[]){
         }
         if (l==0) conf.saveXYZTraj(traj_file, steps, "c"); // Close XYZ traj_file
         
-        if (l%100 == 0){
+        if (l%50 == 0){
             cout << "run " << l << endl;
             energyU.saveAverageInstantValues(instValCount);
             settingsFile(folder, trigger, particlesize, timestep, runs, steps, ustrength, urange, recordMFP, includeSteric, ranU,  
