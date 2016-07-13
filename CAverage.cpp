@@ -40,7 +40,7 @@ CAverage::CAverage(string name, string folder, int datapoints)
 void CAverage::addInstantValue(vector<double> v) {
     for (int i=0; i<_points; i++){
         _instantValues[i] += v[i];
-        _instantValues[i] += v[i]*v[i];
+        _errors[i] += v[i]*v[i];
      }
     //Formula from Wikipedia: Standartabweichung: Bearbeitung fuer auflaufende Messwerte + Standardfehler
     //continues saveAverageInstantValues()!
