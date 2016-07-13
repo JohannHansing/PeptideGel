@@ -11,7 +11,7 @@ int main(int argc, const char* argv[]){
     //NOTE: so far saving Instant Values for each tenth step!
 
     //TRIGGERS:
-    string distribution = argv[1];    // TODO
+    string trigger = argv[1];
     bool ranRod = (strcmp(argv[2] , "true") == 0 ) ;
     bool rand = (strcmp(argv[3] , "true") == 0 ) ;
     bool recordMFP = (strcmp(argv[4] , "true") == 0 ) ;
@@ -54,16 +54,19 @@ int main(int argc, const char* argv[]){
     ifdebug(cout << "copied  params. ";)
 
     cout << "--- PEPTIDE is " << peptide << endl;
+    if (trigger!="noCyl" && trigger!="x"){
+        cout << "ERROR: Bad trigger!" << endl;
+        abort();
+    }
 
-    
     //initialize instance of configuration
-    CConfiguration conf = CConfiguration(timestep, urange, ustrength, particlesize, recordPosHisto, 
+    CConfiguration conf = CConfiguration(trigger, timestep, urange, ustrength, particlesize, recordPosHisto, 
                             includeSteric, ranU, dvar,polydiam, peptide, uDebye);
     ifdebug(cout << "created CConf conf. ";)
     
 
     //Create data folders and print location as string to string "folder"
-    string folder = createDataFolder(timestep, simtime, urange, ustrength, particlesize, includeSteric, ranU, 
+    string folder = createDataFolder(trigger, timestep, simtime, urange, ustrength, particlesize, includeSteric, ranU, 
                              dvar,polydiam, peptide, uDebye);
     ifdebug(cout << "created folder. ";)
     cout << "writing to folder " << folder << endl;
@@ -83,7 +86,7 @@ int main(int argc, const char* argv[]){
     // NEED TO DEFINE BEHAVIOR OF SAVING DISTANCES IN CCONF
     //distancesfile.open((folder + "/Coordinates/squareDistances.txt").c_str());
     
-    settingsFile(folder, particlesize, timestep, runs, steps, ustrength, urange, recordMFP, includeSteric, ranU,  
+    settingsFile(folder, trigger, particlesize, timestep, runs, steps, ustrength, urange, recordMFP, includeSteric, ranU,  
                     dvar, polydiam, peptide, uDebye);
                     
     //create .xyz file to save the trajectory for VMD

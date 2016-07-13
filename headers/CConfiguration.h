@@ -62,6 +62,7 @@ private:
     bool _LJPot;              // if true, then LJ interaction is calculated for steric hindrance
     bool _ranU;
     bool _hpi;
+    bool _noCyl=false;
 
     //COUNTERS AND INIT VALUES
     double _boxCoord[3];
@@ -452,7 +453,7 @@ private:
 
 public:
     CConfiguration();
-    CConfiguration(double timestep,  double potRange,  double potStrength, 
+    CConfiguration(string trigger, double timestep,  double potRange,  double potStrength, 
         double psize, const bool posHisto, const bool steric, const bool ranU, double dvar, double polydiam, string peptide, double uDebye);
     void updateStartpos();
     void makeStep();

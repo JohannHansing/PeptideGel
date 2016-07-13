@@ -30,7 +30,7 @@ size_t sizeOfArray( const T(&)[ N ] )
 }
 
 
-string createDataFolder(double timestep, double simtime, double potRange, double potStrength,
+string createDataFolder(string trigger, double timestep, double simtime, double potRange, double potStrength,
                         double particlesize, bool steric, bool ranU, double dvar, double polydiam, string peptide, double uDebye){
     //NOTE: Maybe I can leave out dt, as soon as I settled on a timestep
     //NOTE: As soon as I create input-list with variables, I must change this function
@@ -38,6 +38,7 @@ string createDataFolder(double timestep, double simtime, double potRange, double
     sprintf(range, "%.3f", potRange);
     //In the definition of folder, the addition has to START WITH A STRING! for the compiler to know what to do (left to right).
     string folder = "sim_data";
+    if (trigger!="x") folder += "/" + trigger; 
     folder += "/" + peptide;
     if (ranU) folder += "/ranU";
     if (steric) folder = folder + "/steric"; 
@@ -57,7 +58,7 @@ string createDataFolder(double timestep, double simtime, double potRange, double
 }
 
 
-void settingsFile(string folder, double particlesize, double timestep, double runs, double steps, double potStrength, double potRange,
+void settingsFile(string folder, string trigger, double particlesize, double timestep, double runs, double steps, double potStrength, double potRange,
         bool recordMFP, bool steric, bool ranU, double dvar, double polydiam, string peptide, double uDebye){
     //Creates a file where the simulation settings are stored
     //MAYBE ALSO INCLUDE TIME AND DATE!!
@@ -73,7 +74,9 @@ void settingsFile(string folder, double particlesize, double timestep, double ru
     settingsfile << "k " << potRange << endl << "U_0 " << potStrength << endl;
     settingsfile << "dvar " << dvar << endl;
     settingsfile << "a " << polydiam << endl;
-    settingsfile << "uDebye " << uDebye << endl;
+    settingsfile << "uDebye " << uDebye << endl;    
+    settingsfile << "trigger: " << trigger << endl;
+
 
     settingsfile.close();
 }

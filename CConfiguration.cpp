@@ -8,7 +8,7 @@ using namespace Eigen;
 CConfiguration::CConfiguration(){
 }
 
-CConfiguration::CConfiguration(double timestep,  double potRange,  double potStrength,
+CConfiguration::CConfiguration(string trigger, double timestep,  double potRange,  double potStrength,
         double psize, const bool posHisto, const bool steric, const bool ranU, double dvar, double polydiam, string peptide, double uDebye){
     setRanNumberGen(0);
     _potRange = potRange;
@@ -35,6 +35,8 @@ CConfiguration::CConfiguration(double timestep,  double potRange,  double potStr
         _boxCoord[i] = 0;
         _prevpos(i) = _ppos(i);
     }
+
+    if (trigger=="noCyl") _noCyl=true;
 
 
     cout << "init Rand..." << endl;
@@ -147,11 +149,10 @@ void CConfiguration::calcStochasticForces(){
 
 
 void CConfiguration::calcMobilityForces(){
-    //calculate mobility forces from potential Epot - Unified version that includes 2ndOrder if k is larger than or equal 0.2 b , except if ranPot is activated.
+    //calculate mobility forces from potential Epot.
     double Epot = 0;
     double rcSq = 1.25992 * _cylLJSq;
     for (auto & bead :  _beads){
-        bead.upot = 0.;
         double r_i = 0, r_k = 0;
         array<double,4> r_is, r_ks;
         std::array<double, 16> ri_arr, rk_arr, rSq_arr;
@@ -159,8 +160,9 @@ void CConfiguration::calcMobilityForces(){
         double utmp = 0, frtmp = 0, uCylTot = 0;     //temporary "hilfsvariables"
         //reset mobility forces to zero
         bead.f_mob = Vector3d::Zero();
-    
+        bead.upot = 0.;
 
+        if (!_noCyl){
         for (int i = 0; i < 3; i++){
             unsigned int cnt=0;// counter to loop over array indices
             int k = i + 1;   //k always one direction "further", i.e. if i = 0 = x-direction, then k = 1 = y-direction
@@ -224,6 +226,7 @@ void CConfiguration::calcMobilityForces(){
                 bead.f_mob(i) += frtmp * ri_arr[j];
                 bead.f_mob(k) += frtmp * rk_arr[j];
             }
+        }
         }
         //ifdebug(cout << "bead.f_mob \n" << bead.f_mob << endl;)
         ifdebug(cout << "uCylTot " << uCylTot <<  endl; )
