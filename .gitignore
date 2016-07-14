@@ -3,3 +3,5 @@ Debug/
 *.DS_Store
 jobs/
 Release/
+relwithdebinfo
+perf*

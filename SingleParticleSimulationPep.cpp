@@ -111,6 +111,7 @@ int main(int argc, const char* argv[]){
             conf.calcStochasticForces();
 
             conf.calcMobilityForces();
+            conf.calcBeadInteraction();
 
 
             if (((i+1)%saveInt) == 0){       //saving Instant Values for each saveInt'th step!
