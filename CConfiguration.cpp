@@ -343,7 +343,7 @@ void CConfiguration::calculateExpPotential(const double rSq, double& U, double& 
     //The potential is weighted with kT!
     if (rSq < _cutoffExpSq && sign != 0){
         const double r = sqrt(rSq);
-        U = sign * _potStrength * exp(-1.0 * r / _potRange);
+        U = sign * _potStrength * expFast( -r / _potRange);
         Fr = U / (_potRange * r);  //This is the force divided by the distance to the rod!
     }
     else{
