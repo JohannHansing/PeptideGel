@@ -82,6 +82,11 @@ int main(int argc, const char* argv[]){
     ofstream trajectoryfile;
     trajectoryfile.open((folder + "/Coordinates/trajectory.txt").c_str());
     
+    ofstream beadstrajfile;
+    beadstrajfile.open((folder + "/Coordinates/beadstraj.txt").c_str());
+    beadstrajfile << "# Trajectories for peptide " << peptide << endl;
+    
+    
     ofstream distancesfile;
     // TODO distancefile
     // NEED TO DEFINE BEHAVIOR OF SAVING DISTANCES IN CCONF
@@ -144,6 +149,9 @@ int main(int argc, const char* argv[]){
                 ifdebug(cout << stepcount * timestep << "\t" << ppos[0] << " " << ppos[1] << " " << ppos[2] << endl;)
                 //TODO pass distancefile to function in conf.
                 //if (stepcount%(100*trajout) == 0) conf.writeDistances( distancesfile, stepcount);
+                //if (stepcount%(10*trajout) == 0){
+                    conf.saveBeadsTraj(beadstrajfile, stepcount * timestep);
+                //}
             }
             
             if (((i+1)%100 == 0) && (l == 0)){       //Save the first trajectory to file
@@ -174,6 +182,7 @@ int main(int argc, const char* argv[]){
     cout << "Simulation Finished" << endl;
 
     trajectoryfile.close();
+    beadstrajfile.close();
     // TODO distancefile
     //distancesfile.close();
 

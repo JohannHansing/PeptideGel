@@ -522,6 +522,14 @@ public:
         x *= x; x *= x; x *= x; x *= x;
         return x;
     }
+    
+    void saveBeadsTraj(ofstream &beadstrajfile, double simtime){
+        beadstrajfile << fixed << simtime;
+        for (auto & bead :  _beads){
+            beadstrajfile << fixed << " \t" << bead.pos(0) << " " << bead.pos(1) << " " << bead.pos(2);
+        }
+        beadstrajfile << endl;
+    }
 
 
 
