@@ -114,7 +114,7 @@ int main(int argc, const char* argv[]){
 
 
             if (((i+1)%saveInt) == 0){       //saving Instant Values for each saveInt'th step!
-                energyU.addInstantValue(conf.getUpot());
+                if (instValCount<10000) energyU.addInstantValue(conf.getUpot());
                 instValCount += 1;
             }
 
