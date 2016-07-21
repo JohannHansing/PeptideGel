@@ -216,7 +216,7 @@ private:
     
     void calcDebyePot(const double r, double& U, double& Fr, int att_rep){
         // att_rep is positive or negative prefactor that determines the sign of the interaction
-        double utmp = att_rep * _uDebye * expFast(-r / _potRange) / r;
+        double utmp = att_rep * _uDebye * exp(-r / _potRange) / r;
         U = utmp;
         Fr += utmp * (_potRange + r)/(_potRange*r*r);
         //Fr += utmp * (1./ (_potRange * r) + 1./(r*r) );
@@ -513,16 +513,7 @@ public:
         }
         distancesfile << endl;
     }
-    
-    double expFast(double x) {
-        //https://codingforspeed.com/using-faster-exponential-approximation/
-        x = 1.0 + x * 0.000244;// / 4096.0;
-        x *= x; x *= x; x *= x; x *= x;
-        x *= x; x *= x; x *= x; x *= x;
-        x *= x; x *= x; x *= x; x *= x;
-        return x;
-    }
-    
+
     void saveBeadsTraj(ofstream &beadstrajfile, double simtime){
         beadstrajfile << fixed << simtime;
         for (auto & bead :  _beads){
