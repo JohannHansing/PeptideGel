@@ -43,7 +43,7 @@ int main(int argc, const char* argv[]){
     double dvar = atof( argv[boolpar+7] );
     double polydiam = atof( argv[boolpar+8] );
     double uDebye = atof( argv[boolpar+9] );
-    double uBend = atof( argv[boolpar+9] );
+    double uBend = atof( argv[boolpar+10] );
     unsigned int saveInt;
     int instValCount = 0;                             //Counter for addInstantValue
     int badsteps = 0;                                 //Count how many times bead displacement had to be adjusted
