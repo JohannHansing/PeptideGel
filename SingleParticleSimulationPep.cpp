@@ -43,6 +43,7 @@ int main(int argc, const char* argv[]){
     double dvar = atof( argv[boolpar+7] );
     double polydiam = atof( argv[boolpar+8] );
     double uDebye = atof( argv[boolpar+9] );
+    double uBend = atof( argv[boolpar+9] );
     unsigned int saveInt;
     int instValCount = 0;                             //Counter for addInstantValue
     int badsteps = 0;                                 //Count how many times bead displacement had to be adjusted
@@ -62,13 +63,13 @@ int main(int argc, const char* argv[]){
 
     //initialize instance of configuration
     CConfiguration conf = CConfiguration(trigger, timestep, urange, ustrength, particlesize, recordPosHisto, 
-                            includeSteric, ranU, dvar,polydiam, peptide, uDebye);
+                            includeSteric, ranU, dvar,polydiam, peptide, uDebye, uBend);
     ifdebug(cout << "created CConf conf. ";)
     
 
     //Create data folders and print location as string to string "folder"
     string folder = createDataFolder(trigger, timestep, simtime, urange, ustrength, particlesize, includeSteric, ranU, 
-                             dvar,polydiam, peptide, uDebye);
+                             dvar,polydiam, peptide, uDebye, uBend);
     ifdebug(cout << "created folder. ";)
     cout << "writing to folder " << folder << endl;
 
@@ -93,7 +94,7 @@ int main(int argc, const char* argv[]){
     //distancesfile.open((folder + "/Coordinates/squareDistances.txt").c_str());
     
     settingsFile(folder, trigger, particlesize, timestep, runs, steps, ustrength, urange, recordMFP, includeSteric, ranU,  
-                    dvar, polydiam, peptide, uDebye, badsteps);
+                    dvar, polydiam, peptide, uDebye, badsteps, uBend);
                     
     //create .xyz file to save the trajectory for VMD
     string traj_file = folder + "/Coordinates/single_traj.xyz";
@@ -156,7 +157,7 @@ int main(int argc, const char* argv[]){
             
             if (((i+1)%100 == 0) && (l == 0)){       //Save the first trajectory to file
                 //TODO XYZ traj
-                //conf.saveXYZTraj(traj_file, i, "a");                    // TODO change back ((i+1)%XXX == 0) to 100
+                conf.saveXYZTraj(traj_file, i, "a");                    // TODO change back ((i+1)%XXX == 0) to 100
             }
         }
         if (l==0) conf.saveXYZTraj(traj_file, steps, "c"); // Close XYZ traj_file
@@ -165,7 +166,7 @@ int main(int argc, const char* argv[]){
             cout << "run " << l << endl;
             energyU.saveAverageInstantValues(instValCount);
             settingsFile(folder, trigger, particlesize, timestep, runs, steps, ustrength, urange, recordMFP, includeSteric, ranU,  
-                            dvar, polydiam, peptide, uDebye, badsteps);
+                            dvar, polydiam, peptide, uDebye, badsteps, uBend);
         }
         
         if (badsteps>10000){//if about one out of 100,000 steps is registered as badstep, assuming that the code is running for at least 500 runs

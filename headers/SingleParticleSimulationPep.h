@@ -31,7 +31,7 @@ size_t sizeOfArray( const T(&)[ N ] )
 
 
 string createDataFolder(string trigger, double timestep, double simtime, double potRange, double potStrength,
-                        double particlesize, bool steric, bool ranU, double dvar, double polydiam, string peptide, double uDebye){
+                        double particlesize, bool steric, bool ranU, double dvar, double polydiam, string peptide, double uDebye, double uBend){
     //NOTE: Maybe I can leave out dt, as soon as I settled on a timestep
     //NOTE: As soon as I create input-list with variables, I must change this function
     char range[5];
@@ -49,6 +49,7 @@ string createDataFolder(string trigger, double timestep, double simtime, double 
             + "/a" + toString(polydiam)
             + "/p" + toString(particlesize)
             + "/uD" + toString(uDebye)
+            + "/uB" + toString(uBend)
             + "/k" + range
             + "/u" + toString(potStrength);
     boost::filesystem::create_directories(folder);
@@ -59,7 +60,7 @@ string createDataFolder(string trigger, double timestep, double simtime, double 
 
 
 void settingsFile(string folder, string trigger, double particlesize, double timestep, double runs, double steps, double potStrength, double potRange,
-        bool recordMFP, bool steric, bool ranU, double dvar, double polydiam, string peptide, double uDebye, int badsteps){
+        bool recordMFP, bool steric, bool ranU, double dvar, double polydiam, string peptide, double uDebye, int badsteps, double uBend){
     //Creates a file where the simulation settings are stored
     //MAYBE ALSO INCLUDE TIME AND DATE!!
     ofstream settingsfile;
@@ -76,6 +77,7 @@ void settingsFile(string folder, string trigger, double particlesize, double tim
     settingsfile << "dvar " << dvar << endl;
     settingsfile << "a " << polydiam << endl;
     settingsfile << "uDebye " << uDebye << endl; 
+    settingsfile << "uBend " << uBend << endl; 
     settingsfile << "\nBADSTEPS " << badsteps << endl;
 
 

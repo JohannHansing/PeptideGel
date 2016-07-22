@@ -9,7 +9,7 @@ CConfiguration::CConfiguration(){
 }
 
 CConfiguration::CConfiguration(string trigger, double timestep,  double potRange,  double potStrength,
-        double psize, const bool posHisto, const bool steric, const bool ranU, double dvar, double polydiam, string peptide, double uDebye){
+        double psize, const bool posHisto, const bool steric, const bool ranU, double dvar, double polydiam, string peptide, double uDebye, double uBend){
     setRanNumberGen(0);
     _potRange = potRange;
     _potStrength = potStrength;
@@ -22,6 +22,7 @@ CConfiguration::CConfiguration(string trigger, double timestep,  double potRange
     _ranU = ranU;
     _dvar = dvar;
     _uDebye = uDebye;
+    _uBend = uBend;
     _mu_sto = sqrt( 2 * _timestep );                 //timestep for stochastic force
     //Spring interaction
     _r0SP = 1.122462 * 2*_pradius;
@@ -265,6 +266,13 @@ void CConfiguration::calcBeadInteraction(){//TODO pep
                 _uSpring += utmp;
                 utot += utmp;
             }
+            if (j==i+2){
+                if (rij==0) rij = sqrt(rijSq);
+                addBendingPot(rij, utmp, frtmp);
+                utot += utmp;
+            }
+            
+            
             faddtmp = frtmp * rvec;
             _beads[i].upot += utot;
             _beads[j].upot += utot;

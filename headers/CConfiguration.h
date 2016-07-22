@@ -199,6 +199,9 @@ private:
     //DEBYE potential
     double _uDebye;
     
+    //BENDING potential
+    double _uBend = 3; // This determines how stiff the peptide is. Judging from looking at VMD simulations, _uBend=3 seems appropriate
+    
     void calcLJPot(const double rSq, double& U, double& Fr, double stericSq){
         //Function to calculate the Lennard-Jones Potential
         double  por6 = pow((stericSq / rSq),3); //por6 stands for "p over r to the power of 6" . The 2 comes from the fact, that I need the particle radius, not the particle size
@@ -220,6 +223,12 @@ private:
         U = utmp;
         Fr += utmp * (_potRange + r)/(_potRange*r*r);
         //Fr += utmp * (1./ (_potRange * r) + 1./(r*r) );
+    }
+    
+    void addBendingPot(const double r, double& U, double& Fr){
+        // simple repulsive potential to create stiffness for peptide
+        U = -_uBend * r / _pradius;
+        Fr += _uBend/(r * _pradius);
     }
 
 
@@ -459,7 +468,7 @@ private:
 public:
     CConfiguration();
     CConfiguration(string trigger, double timestep,  double potRange,  double potStrength, 
-        double psize, const bool posHisto, const bool steric, const bool ranU, double dvar, double polydiam, string peptide, double uDebye);
+        double psize, const bool posHisto, const bool steric, const bool ranU, double dvar, double polydiam, string peptide, double uDebye, double uBend);
     void updateStartpos();
     int makeStep();
     void checkBoxCrossing();
