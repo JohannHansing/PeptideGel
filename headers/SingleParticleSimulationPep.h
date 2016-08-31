@@ -17,7 +17,7 @@ using namespace std;
 template<typename T>
 string toString(const T& value){
     ostringstream oss;
-    oss << value;
+    oss << fixed << value;  // << fixed is needed in order to avoid scientific notation
     return oss.str();
 }
 
