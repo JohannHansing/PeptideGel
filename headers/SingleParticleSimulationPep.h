@@ -21,6 +21,17 @@ string toString(const T& value){
     return oss.str();
 }
 
+string numString( float x ){
+    // from http://stackoverflow.com/questions/18881854/how-to-output-float-to-cout-without-scientific-notation-or-trailing-zeros
+    ostringstream strout ;
+    strout << fixed << x ;
+    string str = strout.str() ;
+    size_t end = str.find_last_not_of( '0' ) + 1 ;
+    str=str.erase( end );
+    if (str.back()=='.') return str.substr(0, str.length() - 1);
+    return str;
+}
+
 
 template <typename T, size_t N>
 inline
@@ -42,16 +53,16 @@ string createDataFolder(string trigger, double timestep, double simtime, double 
     folder += "/" + peptide;
     if (ranU) folder += "/ranU";
     if (steric) folder = folder + "/steric"; 
-    folder += "/d" + toString(dvar);
+    folder += "/d" + numString(dvar);
     folder = folder
-            + "/dt" + toString(timestep)
-            + "/t" + toString(simtime)
-            + "/a" + toString(polydiam)
-            + "/p" + toString(particlesize)
-            + "/uD" + toString(uDebye)
-            + "/uB" + toString(uBend)
+            + "/dt" + numString(timestep)
+            + "/t" + numString(simtime)
+            + "/a" + numString(polydiam)
+            + "/p" + numString(particlesize)
+            + "/uD" + numString(uDebye)
+            + "/uB" + numString(uBend)
             + "/k" + range
-            + "/u" + toString(potStrength);
+            + "/u" + numString(potStrength);
     boost::filesystem::create_directories(folder);
     boost::filesystem::create_directory(folder + "/InstantValues");
     boost::filesystem::create_directory(folder + "/Coordinates");
