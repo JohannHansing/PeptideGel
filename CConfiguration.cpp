@@ -266,7 +266,8 @@ void CConfiguration::calcBeadInteraction(){//TODO pep
                 _uSpring += utmp;
                 utot += utmp;
             }
-            if (j==i+2){
+            // BEND
+            if (j==i+2 && _uBend!=0){
                 if (rij==0) rij = sqrt(rijSq);
                 addBendingPot(rij, utmp, frtmp);
                 utot += utmp;

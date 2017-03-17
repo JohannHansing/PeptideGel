@@ -45,7 +45,7 @@ string createDataFolder(string trigger, double timestep, double simtime, double 
                         double particlesize, bool steric, bool ranU, double dvar, double polydiam, string peptide, double uDebye, double uBend){
     //NOTE: Maybe I can leave out dt, as soon as I settled on a timestep
     //NOTE: As soon as I create input-list with variables, I must change this function
-    char range[5];
+    char range[10];
     sprintf(range, "%.3f", potRange);
     //In the definition of folder, the addition has to START WITH A STRING! for the compiler to know what to do (left to right).
     string folder = "sim_data";
